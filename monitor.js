@@ -12,6 +12,7 @@ window.MonitorApp = {
         this.render();
         this.setupEventListeners();
         this.checkServerConnectivity();
+        this.loadStats();
         this.generateQRCode();
         this.startPolling();
     },
@@ -90,6 +91,16 @@ window.MonitorApp = {
                         <div id="last-command" class="command-display">
                             <p class="text-muted">Sin comandos recientes</p>
                         </div>
+                        
+                        <h3 class="mt-3">🔧 Acciones</h3>
+                        <div class="action-buttons">
+                            <button id="refresh-data-btn" class="btn btn-secondary" style="width: 100%; margin-bottom: 0.5rem;">
+                                🔄 Recargar Datos
+                            </button>
+                            <button id="test-connection-btn" class="btn btn-secondary" style="width: 100%;">
+                                🌐 Probar Conexión
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -118,6 +129,72 @@ window.MonitorApp = {
         document.getElementById('next-btn').addEventListener('click', () => {
             this.nextTrack();
         });
+        
+        // Botones de acción
+        document.getElementById('refresh-data-btn').addEventListener('click', () => {
+            this.refreshAllData();
+        });
+        
+        document.getElementById('test-connection-btn').addEventListener('click', () => {
+            this.testConnection();
+        });
+    },
+    
+    async loadStats() {
+        try {
+            // Intentar cargar estadísticas básicas
+            await this.loadSongsCount();
+            
+            // Actualizar sesión actual
+            if (this.sessionId) {
+                document.getElementById('current-session').textContent = this.sessionId.slice(-8);
+            }
+        } catch (error) {
+            console.log('[Monitor] Error loading stats:', error.message);
+        }
+    },
+    
+    async loadSongsCount() {
+        try {
+            // Intentar varios endpoints para obtener conteo de canciones
+            const endpoints = [
+                '/api/songs/count',
+                '/songs/stats', // Estadísticas de canciones
+                '/api/songs/stats', // Estadísticas alternativas
+                '/songs/count',
+                '/api/profiler/genres' // Endpoint correcto para géneros
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${this.serverBaseURL}${endpoint}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Manejar diferentes formatos de respuesta
+                        if (data.totalSongs || data.total || data.count) {
+                            const count = data.totalSongs || data.total || data.count;
+                            document.getElementById('total-songs').textContent = count.toLocaleString();
+                            return;
+                        } else if (Array.isArray(data)) {
+                            // Si es un array (como géneros), mostrar la cantidad
+                            document.getElementById('total-songs').textContent = `${data.length} géneros`;
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // Continúar con el siguiente endpoint
+                    continue;
+                }
+            }
+            
+            // Si no se encuentra información, mostrar estado
+            document.getElementById('total-songs').textContent = 'N/D';
+            
+        } catch (error) {
+            console.log('[Monitor] No se pudo cargar conteo de canciones');
+            document.getElementById('total-songs').textContent = '?';
+        }
     },
     
     async generateQRCode() {
@@ -129,21 +206,62 @@ window.MonitorApp = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sessionId: this.sessionId,
-                    frontPort: window.location.port || 80
+                    frontPort: window.location.port || (window.location.protocol === 'https:' ? 443 : 80)
                 })
             });
             
+            if (!response.ok) {
+                throw new Error(`QR generation failed: ${response.status}`);
+            }
+            
             const data = await response.json();
             
-            if (data.success) {
-                this.displayQR(data.qrUrl, data.mobileUrl);
+            // Manejar la respuesta real del servidor
+            if (data.mobileURL) {
+                this.displayQRFromURL(data.mobileURL);
                 document.getElementById('current-session').textContent = this.sessionId.slice(-8);
+                console.log('[Monitor] QR URL generated:', data.mobileURL);
+            } else {
+                throw new Error('No mobile URL returned from server');
             }
         } catch (error) {
-            console.error('[Monitor] Error generando QR:', error);
-            document.getElementById('qr-container').innerHTML = 
-                '<p class="error">Error generando código QR</p>';
+            console.warn('[Monitor] Error generando QR:', error.message);
+            this.displayQRError();
         }
+    },
+    
+    displayQRFromURL(mobileURL) {
+        // Generar QR usando una librería online o mostrar URL directamente
+        const container = document.getElementById('qr-container');
+        
+        // Usar una API pública para generar QR
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(mobileURL)}`;
+        
+        container.innerHTML = `
+            <div class="qr-code">
+                <img src="${qrApiUrl}" alt="Código QR" style="width: 200px; height: 200px;" 
+                     onerror="this.parentElement.innerHTML='<p>⚠️ Error cargando QR</p><p><a href=\\'${mobileURL}\\' target=\\'_blank\\'>${mobileURL}</a></p>'">
+                <p class="text-center mt-2">Escanea para control móvil</p>
+                <small class="text-muted">${mobileURL}</small>
+            </div>
+        `;
+    },
+    
+    displayQRError() {
+        const container = document.getElementById('qr-container');
+        container.innerHTML = `
+            <div class="qr-error">
+                <p>⚠️ No se pudo generar el código QR</p>
+                <p>Acceso directo al control:</p>
+                <a href="/control?session=${this.sessionId}" target="_blank" class="btn btn-secondary">
+                    📱 Abrir Control Móvil
+                </a>
+                <small class="text-muted">ID de sesión: ${this.sessionId.slice(-8)}</small>
+            </div>
+        `;
+        
+        // Actualizar sesión actual de todas formas
+        document.getElementById('current-session').textContent = this.sessionId.slice(-8);
     },
     
     displayQR(qrUrl, mobileUrl) {
@@ -313,17 +431,31 @@ window.MonitorApp = {
     },
     
     async playRandomSong() {
+        this.updateStatus('Buscando canción aleatoria...', 'info');
+        
         try {
-            const response = await fetch(`${this.serverBaseURL}/api/random-song`);
-            const data = await response.json();
+            // Usar el endpoint correcto del servidor
+            const response = await fetch(`${this.serverBaseURL}/songs/random/1`);
             
-            if (data.success) {
-                this.updateCurrentSong(data.song);
-                this.updateStatus('Reproduciendo canción aleatoria', 'success');
+            if (response.ok) {
+                const data = await response.json();
+                
+                // El servidor devuelve un array con las canciones
+                if (Array.isArray(data) && data.length > 0) {
+                    const randomSong = data[0]; // Tomar la primera canción
+                    this.updateCurrentSong(randomSong);
+                    this.updateStatus('Reproduciendo canción aleatoria', 'success');
+                    return;
+                } else {
+                    this.updateStatus('No se encontraron canciones disponibles', 'warning');
+                }
+            } else {
+                this.updateStatus('Error del servidor al obtener canción aleatoria', 'error');
             }
+            
         } catch (error) {
             console.error('[Monitor] Error playing random song:', error);
-            this.updateStatus('Error reproduciendo canción', 'error');
+            this.updateStatus('Error obteniendo canción aleatoria', 'error');
         }
     },
     
@@ -380,6 +512,71 @@ window.MonitorApp = {
             
             // Mostrar mensaje al usuario
             this.updateStatus('No se puede conectar al servidor. Algunas funciones pueden no estar disponibles.', 'warning');
+        }
+    },
+    
+    async refreshAllData() {
+        this.updateStatus('Refrescando datos...', 'info');
+        
+        try {
+            await this.loadStats();
+            await this.updateClientsList();
+            await this.checkForCommands();
+            
+            this.updateStatus('Datos actualizados', 'success');
+        } catch (error) {
+            console.error('[Monitor] Error refreshing data:', error);
+            this.updateStatus('Error refrescando datos', 'error');
+        }
+    },
+    
+    async testConnection() {
+        const testBtn = document.getElementById('test-connection-btn');
+        const originalText = testBtn.textContent;
+        
+        testBtn.textContent = '🔄 Probando...';
+        testBtn.disabled = true;
+        
+        try {
+            await this.checkServerConnectivity();
+            
+            // Probar algunos endpoints comunes
+            const endpoints = ['/api/profiler/genres', '/api/songs', '/network-info', '/commands'];
+            const results = [];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${this.serverBaseURL}${endpoint}`, { 
+                        method: 'HEAD',
+                        cache: 'no-cache'
+                    });
+                    
+                    results.push(`${endpoint}: ${response.ok ? '✅' : '❌'} (${response.status})`);
+                } catch (error) {
+                    results.push(`${endpoint}: ❌ Error`);
+                }
+            }
+            
+            // Mostrar resultados en el comando display
+            const commandDisplay = document.getElementById('last-command');
+            commandDisplay.innerHTML = `
+                <div class="test-results">
+                    <strong>🔧 Prueba de Conectividad</strong>
+                    <div style="font-size: 0.8rem; margin-top: 0.5rem;">
+                        ${results.map(result => `<div>${result}</div>`).join('')}
+                    </div>
+                    <small>Ejecutado: ${new Date().toLocaleTimeString()}</small>
+                </div>
+            `;
+            
+            this.updateStatus('Prueba de conexión completada', 'info');
+            
+        } catch (error) {
+            console.error('[Monitor] Error testing connection:', error);
+            this.updateStatus('Error probando conexión', 'error');
+        } finally {
+            testBtn.textContent = originalText;
+            testBtn.disabled = false;
         }
     },
     

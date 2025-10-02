@@ -212,7 +212,7 @@ window.ControlApp = {
         }
         
         try {
-            const response = await fetch(`${this.baseUrl}/register-client`, {
+            const response = await fetch(`${this.baseUrl}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -238,9 +238,9 @@ window.ControlApp = {
                     this.showView('profile-setup');
                 }
                 
-                this.showStatus('register-status', 'Conectado exitosamente', 'success');
+                this.showStatus('register-status', data.message || 'Conectado exitosamente', 'success');
             } else {
-                this.showStatus('register-status', data.message || 'Error al conectar', 'error');
+                this.showStatus('register-status', data.error || 'Error al conectar', 'error');
             }
         } catch (error) {
             console.error('[Control] Error registering:', error);
@@ -250,7 +250,7 @@ window.ControlApp = {
     
     async loadGenres() {
         try {
-            const response = await fetch(`${this.baseUrl}/api/genres`);
+            const response = await fetch(`${this.baseUrl}/api/profiler/genres`);
             const genres = await response.json();
             
             this.availableGenres = genres;
