@@ -2,6 +2,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[App] Inicializando aplicación unificada...');
     
+    // Manejar OAuth de Spotify si hay un código en la URL
+    handleSpotifyOAuth();
+    
     // Inicializar router
     window.router = new Router();
     
@@ -20,6 +23,66 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('[App] Aplicación inicializada correctamente');
 });
+
+// Manejar código OAuth de Spotify
+function handleSpotifyOAuth() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    
+    if (code) {
+        console.log('[OAuth] Código de Spotify detectado, procesando...');
+        
+        const REDIRECT_URI = window.location.origin + '/fronts/';
+        const serverURL = window.AppConfig?.SERVER_URL || 'https://mysupermusicappgame.azurewebsites.net';
+        
+        // Mostrar mensaje de procesamiento
+        showGlobalMessage('Procesando autenticación de Spotify...', 'info');
+        
+        fetch(`${serverURL}/auth/spotify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.access_token) {
+                console.log('[OAuth] ✅ Token recibido exitosamente');
+                window.localStorage.setItem('spotify_token', data.access_token);
+                showGlobalMessage('Conectado a Spotify exitosamente', 'success');
+                
+                // Limpiar código de la URL y redirigir al monitor
+                window.history.replaceState({}, document.title, '/fronts/#/monitor');
+                
+                // Dar tiempo para que el router se inicialice y luego navegar
+                setTimeout(() => {
+                    if (window.navigateTo) {
+                        window.navigateTo('/monitor');
+                    }
+                }, 100);
+                
+            } else {
+                console.error('[OAuth] Error al obtener token:', data.error || '');
+                showGlobalMessage('Error al conectar con Spotify', 'error');
+                // Redirigir al monitor de todas formas
+                setTimeout(() => {
+                    if (window.navigateTo) {
+                        window.navigateTo('/monitor');
+                    }
+                }, 2000);
+            }
+        })
+        .catch(err => {
+            console.error('[OAuth] Error de red:', err);
+            showGlobalMessage('Error de conexión con Spotify', 'error');
+            // Redirigir al monitor de todas formas
+            setTimeout(() => {
+                if (window.navigateTo) {
+                    window.navigateTo('/monitor');
+                }
+            }, 2000);
+        });
+    }
+}
 
 function setupGlobalEventListeners() {
     // Manejar errores globales
