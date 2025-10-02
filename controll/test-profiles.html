@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Profile APIs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #666; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Profile APIs</h1>
+    <p>Herramienta para probar los endpoints del sistema de perfiles</p>
+    
+    <div class="test-section">
+        <h2>📋 Configuración</h2>
+        <label>Base URL: 
+            <input type="text" id="baseUrl" value="https://mysupermusicappgame.azurewebsites.net" style="width: 300px; padding: 5px;">
+        </label>
+    </div>
+
+    <div class="test-section">
+        <h2>1. 📀 Test Géneros</h2>
+        <button onclick="testGenres()">GET /api/profiler/genres</button>
+        <button onclick="testGenresStats()">GET /api/profiler/genres/stats</button>
+        <div id="genresResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 📅 Test Años</h2>
+        <button onclick="testYears()">GET /api/profiler/years</button>
+        <button onclick="testDecades()">GET /api/profiler/years/decades</button>
+        <div id="yearsResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 🎵 Test Canciones</h2>
+        <button onclick="testSongsRandom()">GET /api/profiler/songs/random</button>
+        <button onclick="testSongsFiltered()">GET /api/profiler/songs?genre=salsa</button>
+        <div id="songsResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 👤 Test Perfiles</h2>
+        <button onclick="testCreateProfile()">POST /api/profiler/profiles</button>
+        <button onclick="testProfileValidation()">POST /api/profiler/profiles/validate</button>
+        <div id="profilesResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. 🔗 Test Integración Backend</h2>
+        <button onclick="testBackendStatus()">GET /status</button>
+        <button onclick="testBackendSongs()">GET /songs/random/1</button>
+        <div id="backendResult" class="result"></div>
+    </div>
+
+    <script>
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value;
+        }
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = 'result ' + (isError ? 'error' : 'success');
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Tests de Géneros
+        async function testGenres() {
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/genres`);
+            showResult('genresResult', result, !result.success);
+        }
+
+        async function testGenresStats() {
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/genres/stats`);
+            showResult('genresResult', result, !result.success);
+        }
+
+        // Tests de Años
+        async function testYears() {
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/years`);
+            showResult('yearsResult', result, !result.success);
+        }
+
+        async function testDecades() {
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/years/decades`);
+            showResult('yearsResult', result, !result.success);
+        }
+
+        // Tests de Canciones
+        async function testSongsRandom() {
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/songs/random?limit=3`);
+            showResult('songsResult', result, !result.success);
+        }
+
+        async function testSongsFiltered() {
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/songs?genre=salsa&limit=5`);
+            showResult('songsResult', result, !result.success);
+        }
+
+        // Tests de Perfiles
+        async function testCreateProfile() {
+            const profileData = {
+                clientId: 'test_' + Date.now(),
+                clientName: 'Test Client',
+                preferences: {
+                    genres: ['salsa', 'merengue'],
+                    years: ['80s', '90s']
+                }
+            };
+
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/profiles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profileData)
+            });
+            
+            showResult('profilesResult', result, !result.success);
+        }
+
+        async function testProfileValidation() {
+            const profileData = {
+                preferences: {
+                    genres: ['invalid_genre'],
+                    years: ['invalid_year']
+                }
+            };
+
+            const result = await makeRequest(`${getBaseUrl()}/api/profiler/profiles/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profileData)
+            });
+            
+            showResult('profilesResult', result, !result.success);
+        }
+
+        // Tests del Backend Principal
+        async function testBackendStatus() {
+            const result = await makeRequest(`${getBaseUrl()}/status`);
+            showResult('backendResult', result, !result.success);
+        }
+
+        async function testBackendSongs() {
+            const result = await makeRequest(`${getBaseUrl()}/songs/random/1`);
+            showResult('backendResult', result, !result.success);
+        }
+
+        // Auto-test al cargar
+        window.onload = function() {
+            console.log('🧪 Test Profile APIs loaded');
+            console.log('Ready to test profile system integration');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify Remote Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS Reset */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: 'Roboto', sans-serif;
+      background-color: #F5EFE6;
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #6D94C5;
+      font-weight: 500;
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      color: #6D94C5;
+      font-weight: 500;
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+    }
+
+    p {
+      color: #896C6C;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-family: 'Roboto', sans-serif;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #6D94C5;
+    }
+
+    button {
+      background: #6D94C5;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background: #5a7ca3;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      background: #896C6C;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .button-row button {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    #video {
+      width: 100%;
+      max-width: 300px;
+      height: 300px;
+      border-radius: 12px;
+      background: #f0f0f0;
+      object-fit: cover;
+      margin-bottom: 15px;
+    }
+
+    .status-message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .or-divider {
+      margin: 20px 0;
+      position: relative;
+      text-align: center;
+      color: #896C6C;
+    }
+
+    .or-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #e0e0e0;
+    }
+
+    .or-divider span {
+      background: white;
+      padding: 0 15px;
+    }
+
+    .client-info {
+      background: #e8f4f8;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .client-info h3 {
+      color: #6D94C5;
+      margin-bottom: 5px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .song-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #e0e0e0;
+    }
+
+    .song-button {
+      background: linear-gradient(135deg, #333, #555);
+      color: white;
+      border: none;
+      padding: 15px 20px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      margin: 5px 0;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .song-button:hover {
+      background: linear-gradient(135deg, #555, #777);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .song-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .genre-buttons, .decade-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .genre-button, .decade-button {
+      background: linear-gradient(135deg, #6D94C5, #8BB3D9);
+      color: white;
+      border: none;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .genre-button:hover, .decade-button:hover {
+      background: linear-gradient(135deg, #8BB3D9, #A5C6E8);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .genre-button.selected, .decade-button.selected {
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+    }
+
+    .genre-button:active, .decade-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .selection-summary {
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+      text-align: center;
+      font-weight: 500;
+      color: #495057;
+    }
+
+    #genreSelection h4, #decadeSelection h4 {
+      color: #6D94C5;
+      margin: 15px 0 10px 0;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .nav-button {
+      background: transparent;
+      color: #6D94C5;
+      border: 2px solid #6D94C5;
+      padding: 8px 15px;
+      font-size: 0.9rem;
+    }
+
+    .nav-button:hover {
+      background: #6D94C5;
+      color: white;
+    }
+
+    .nav-button.active {
+      background: #6D94C5;
+      color: white;
+    }
+
+    /* Estilos para la nueva interfaz simplificada */
+    .main-control {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .main-control .icon {
+      font-size: 4rem;
+      margin-bottom: 10px;
+    }
+
+    .main-control h2 {
+      color: #6D94C5;
+      margin-bottom: 8px;
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      color: #896C6C;
+      margin-bottom: 30px;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .random-play-button {
+      background: linear-gradient(135deg, #6D94C5, #896C6C);
+      color: white;
+      border: none;
+      padding: 18px 30px;
+      font-size: 1.3rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(109, 148, 197, 0.3);
+      min-width: 250px;
+      margin-bottom: 20px;
+    }
+
+    .random-play-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(109, 148, 197, 0.4);
+    }
+
+    .random-play-button:active {
+      transform: translateY(0);
+    }
+
+    .random-play-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .current-song {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 20px;
+      border: 2px solid #e9ecef;
+    }
+
+    .current-song h4 {
+      color: #6D94C5;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+
+    .song-details {
+      margin-bottom: 20px;
+    }
+
+    .song-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .song-artist {
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 0;
+    }
+
+    .basic-controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .control-btn {
+      background: white;
+      border: 2px solid #6D94C5;
+      color: #6D94C5;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-btn:hover {
+      background: #6D94C5;
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .another-random-btn {
+      background: transparent;
+      color: #896C6C;
+      border: 2px solid #896C6C;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .another-random-btn:hover {
+      background: #896C6C;
+      color: white;
+    }
+
+    .status-message {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    /* Profile Setup Styles */
+    .setup-step {
+      margin-bottom: 20px;
+    }
+
+    .selection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .genre-decades-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin: 15px 0;
+    }
+
+    .genre-decades-group {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 15px;
+      border: 1px solid #e9ecef;
+    }
+
+    .genre-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .decades-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+    }
+
+    .selection-item {
+      background: white;
+      border: 2px solid #E8E8E8;
+      color: #333;
+      padding: 12px 8px;
+      font-size: 0.9rem;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .selection-item:hover {
+      border-color: #6D94C5;
+      background: #f8fbff;
+    }
+
+    .selection-item.selected {
+      background: #6D94C5;
+      color: white;
+      border-color: #6D94C5;
+      transform: scale(1.05);
+    }
+
+    .primary-button {
+      background: #6D94C5;
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      font-size: 1rem;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      width: 100%;
+      margin: 15px 0;
+    }
+
+    .primary-button:hover {
+      background: #5A7FA2;
+      transform: translateY(-2px);
+    }
+
+    .profile-summary {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 15px;
+      margin: 15px 0;
+      text-align: left;
+    }
+
+    .profile-summary h4 {
+      color: #6D94C5;
+      margin-bottom: 10px;
+    }
+
+    .profile-summary .tag {
+      background: #E8F4FF;
+      color: #6D94C5;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      margin: 2px;
+      display: inline-block;
+    }
+
+    .loading-spinner {
+      font-size: 2rem;
+      animation: spin 2s linear infinite;
+      margin: 20px 0;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Recommendations Section */
+    .recommendations-section {
+      background: linear-gradient(135deg, #FFE5B4 0%, #FFCCCB 100%);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 15px 0;
+      border: 2px solid #F0C27B;
+    }
+
+    .recommendations-section h3 {
+      color: #8B4513;
+      margin-bottom: 10px;
+    }
+
+    .recommendations-section p {
+      color: #A0522D;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+
+    .recommended-play-button {
+      background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      font-size: 1rem;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+      width: 100%;
+    }
+
+    .recommended-play-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+    }
+
+    .recommended-play-button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Vista inicial para llegadas directas -->
+    <div id="scannerView" class="card">
+      <div class="icon">📱</div>
+      <h1>Control Móvil de Spotify</h1>
+      <p>Para usar esta aplicación, escanea el código QR desde la pantalla principal con la cámara de tu teléfono</p>
+      
+      <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; font-size: 0.9rem;">
+          <strong>📋 Instrucciones:</strong><br>
+          1. Ve a la pantalla principal<br>
+          2. Busca el código QR en pantalla<br>
+          3. Escanéalo con la cámara de tu dispositivo<br>
+          4. Serás redirigido automáticamente aquí
+        </p>
+      </div>
+      
+      <div id="statusMessage"></div>
+    </div>
+
+    <!-- Vista de Registro -->
+    <div id="registerView" class="card hidden">
+      <div class="nav-buttons">
+        <button id="backToScannerBtn" class="nav-button">← Volver</button>
+      </div>
+      
+      <div class="icon">✅</div>
+      <h1>¡QR Detectado!</h1>
+      <p>Tu dispositivo está listo para conectarse. Solo ingresa un nombre para identificarlo en la pantalla principal.</p>
+      
+      <div id="sessionInfo" class="client-info">
+        <h3>Sesión Detectada:</h3>
+        <p id="sessionDisplay">Cargando...</p>
+      </div>
+      
+      <input type="text" id="clientNameInput" placeholder="Ej: iPhone de Carlos, Samsung Galaxy, etc.">
+      <button id="registerBtn">🎵 Conectar al Control de Música</button>
+      
+      <div id="registerStatus"></div>
+    </div>
+
+    <!-- Vista de Configuración de Perfil -->
+    <div id="profileSetupView" class="card hidden">
+      <div class="nav-buttons">
+        <button id="disconnectFromProfileBtn" class="nav-button">🔌 Desconectar</button>
+      </div>
+      
+      <div class="icon">👤</div>
+      <h1>Configurar tu Perfil Musical</h1>
+      <p>Para darte mejores recomendaciones, cuéntanos sobre tus gustos musicales</p>
+      
+      <div id="profileSetupSteps">
+        <!-- Step 1: Géneros -->
+        <div id="genreStep" class="setup-step">
+          <h3>📀 Selecciona tus géneros favoritos</h3>
+          <p>Puedes seleccionar múltiples géneros</p>
+          <div id="genresList" class="selection-grid">
+            <!-- Se carga dinámicamente -->
+          </div>
+          
+          <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+            <label for="songsLimit" style="display: block; margin-bottom: 8px; font-weight: bold;">🎵 Canciones por género:</label>
+            <select id="songsLimit" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+              <option value="10">10 canciones por género</option>
+              <option value="20" selected>20 canciones por género</option>
+              <option value="30">30 canciones por género</option>
+              <option value="50">50 canciones por género</option>
+              <option value="100">100 canciones por género</option>
+              <option value="-1">Todas las canciones disponibles</option>
+            </select>
+            <small style="color: #666; display: block; margin-top: 5px;">Controla cuántas canciones incluir en tu perfil por cada género seleccionado</small>
+          </div>
+          
+          <button id="nextToYears" class="primary-button hidden">Crear mi Perfil 🎵</button>
+        </div>
+        
+        <!-- Step 2: Años/Décadas -->
+        <div id="yearsStep" class="setup-step hidden">
+          <h3>📅 ¿Qué épocas prefieres para cada género?</h3>
+          <p>Selecciona las décadas que más te gustan para cada género</p>
+          <div id="genreDecadesList" class="genre-decades-container">
+            <!-- Se carga dinámicamente por género -->
+          </div>
+          <button id="createProfileBtn" class="primary-button hidden">Crear mi Perfil 🎵</button>
+        </div>
+        
+        <!-- Step 3: Loading -->
+        <div id="profileLoadingStep" class="setup-step hidden">
+          <div class="loading-spinner">🎵</div>
+          <h3>Creando tu perfil...</h3>
+          <p>Analizando tus gustos musicales</p>
+        </div>
+        
+        <!-- Step 4: Success -->
+        <div id="profileSuccessStep" class="setup-step hidden">
+          <div class="icon">✅</div>
+          <h3>¡Perfil creado exitosamente!</h3>
+          <p>Ya puedes disfrutar de recomendaciones personalizadas</p>
+          <div id="profileSummary" class="profile-summary"></div>
+          <button id="goToMusicBtn" class="primary-button">¡Vamos a la música! 🎵</button>
+        </div>
+      </div>
+      
+      <div id="profileSetupStatus"></div>
+    </div>
+
+    <!-- Vista de Control Simplificada -->
+    <div id="controlView" class="card hidden">
+      <div class="nav-buttons">
+        <button id="disconnectFromControlBtn" class="nav-button">🔌 Desconectar</button>
+      </div>
+      
+      <div class="client-info">
+        <h3>Dispositivo Conectado</h3>
+        <p id="clientInfo">Conectando...</p>
+      </div>
+      
+      <div class="main-control">
+        <div class="icon">🎵</div>
+        <h2>Control de Música</h2>
+        <p class="subtitle">¡Descubre música increíble de forma aleatoria!</p>
+        
+        <!-- Botón principal para iniciar música aleatoria -->
+        <button id="startMusicBtn" class="random-play-button">
+          🎲 Iniciar Música Aleatoria
+        </button>
+        
+        <!-- Información de la canción actual (oculta inicialmente) -->
+        <div id="currentSongInfo" class="current-song hidden">
+          <h4>🎵 Reproduciendo:</h4>
+          <div id="songDetails" class="song-details">
+            <p class="song-title">-</p>
+            <p class="song-artist">-</p>
+          </div>
+          
+          <!-- Controles básicos una vez que hay música -->
+          <div class="basic-controls">
+            <button id="previousBtn" class="control-btn">⏮️</button>
+            <button id="pauseBtn" class="control-btn">⏸️</button>
+            <button id="playBtn" class="control-btn">▶️</button>
+            <button id="nextBtn" class="control-btn">⏭️</button>
+          </div>
+          
+          <!-- Botón para otra canción aleatoria -->
+          <button id="anotherRandomBtn" class="another-random-btn">
+            🎲 Otra Canción Aleatoria
+          </button>
+        </div>
+      </div>
+      
+      <div id="controlStatus" class="status-message"></div>
+    </div>
+  </div>
+
+  <!-- No hay librerías externas necesarias -->
+  
+  <script>
+    // Variables globales
+    let currentView = 'scanner';
+    let sessionId = null;
+    let clientId = null;
+    let clientName = null;
+    let heartbeatInterval = null;
+
+    // Variables de estado de la aplicación
+    let inicio = true;
+    let session_started = false;
+
+    // Variables para selección de música
+    let selectedGenre = null;
+    let selectedDecade = null;
+
+    // Variables para perfil de usuario
+    let userProfile = null;
+    let selectedGenres = [];
+    let selectedDecades = {}; // Formato: { "salsa": ["70's", "90's"], "rock": ["80's"] }
+    let availableGenres = [];
+    let availableYears = [];
+
+    // Configuración dinámica
+    let baseUrl = 'https://mysupermusicappgame.azurewebsites.net'; // URL base por defecto
+
+    // Función para detectar IP del servidor automáticamente - COMENTADA para usar Azure
+    /*
+    async function detectServerURL() {
+      // Primero intentar obtener IP desde la URL o hostname
+      const hostname = window.location.hostname;
+      
+      // Si no estamos en localhost, usar el hostname actual
+      if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        baseUrl = `http://${hostname}:3001`;
+        console.log('[Config] Usando IP desde hostname:', baseUrl);
+        
+        // Verificar que el servidor responda
+        try {
+          const response = await fetch(`${baseUrl}/network-info`);
+          if (response.ok) {
+            const networkInfo = await response.json();
+            console.log('[Config] Servidor confirmado en:', baseUrl, networkInfo);
+            return baseUrl;
+          }
+        } catch (error) {
+          console.warn('[Config] Error verificando servidor en hostname:', error.message);
+        }
+      }
+      
+      // Fallback: intentar localhost para obtener la IP real
+      try {
+        console.log('[Config] Intentando localhost para detectar IP...');
+        const response = await fetch('http://localhost:3001/network-info');
+        if (response.ok) {
+          const networkInfo = await response.json();
+          baseUrl = `http://${networkInfo.localIP}:3001`;
+          console.log('[Config] IP detectada desde localhost:', baseUrl);
+          return baseUrl;
+        }
+      } catch (error) {
+        console.warn('[Config] No se pudo conectar a localhost:', error.message);
+      }
+      
+      console.log('[Config] Usando URL por defecto:', baseUrl);
+      return baseUrl;
+    }
+    */
+
+    // Utilidades
+    function showMessage(elementId, message, type) {
+      const element = document.getElementById(elementId);
+      element.textContent = message;
+      element.className = `status-message ${type}`;
+    }
+
+    function showView(viewName) {
+      console.log(`[State] === SHOWVIEW INICIADO ===`);
+      console.log(`[State] showView llamado con: ${viewName}, inicio: ${inicio}, session_started: ${session_started}`);
+      console.log(`[State] Estado actual - sessionId: ${sessionId}, clientId: ${clientId}`);
+      
+      try {
+        // Ocultar todas las vistas primero
+        const views = ['scannerView', 'registerView', 'controlView', 'profileSetupView'];
+        views.forEach(viewId => {
+          const element = document.getElementById(viewId);
+          if (element) {
+            element.classList.add('hidden');
+          }
+        });
+        
+        // Mostrar la vista solicitada
+        if (viewName === 'scanner') {
+          document.getElementById('scannerView').classList.remove('hidden');
+          console.log('[State] ✅ Mostrando scanner');
+        } else if (viewName === 'register') {
+          document.getElementById('registerView').classList.remove('hidden');
+          if (sessionId) {
+            const sessionDisplay = document.getElementById('sessionDisplay');
+            if (sessionDisplay) {
+              sessionDisplay.textContent = sessionId;
+            }
+          }
+          console.log('[State] ✅ Mostrando registro');
+        } else if (viewName === 'profileSetup') {
+          document.getElementById('profileSetupView').classList.remove('hidden');
+          console.log('[State] ✅ Mostrando profile setup');
+        } else if (viewName === 'control') {
+          const controlView = document.getElementById('controlView');
+          if (controlView) {
+            controlView.classList.remove('hidden');
+            console.log('[State] ✅ Vista de control visible');
+            
+            // Actualizar información del cliente si está disponible
+            if (clientName) {
+              const clientInfo = document.getElementById('clientInfo');
+              if (clientInfo) {
+                clientInfo.textContent = clientName;
+                console.log('[State] ✅ Info del cliente actualizada');
+              }
+            }
+            
+            // Mostrar recomendaciones si hay perfil
+            if (userProfile && userProfile.favorite_genres && userProfile.favorite_genres.length > 0) {
+              console.log('[State] 🎯 Mostrando recomendaciones...');
+              showRecommendations();
+            }
+            
+            console.log('[State] ✅ Control view completamente configurado');
+          } else {
+            console.error('[State] ❌ Element controlView no encontrado!');
+          }
+        }
+        
+        currentView = viewName;
+        console.log(`[State] === SHOWVIEW COMPLETADO - currentView: ${currentView} ===`);
+        
+      } catch (error) {
+        console.error('[State] ❌ Error en showView:', error);
+        console.error('[State] Stack:', error.stack);
+      }
+    }
+
+    // Función para cambiar estados
+    function updateAppState(newState) {
+      console.log(`[State] Cambiando estado: inicio=${inicio}, session_started=${session_started} -> ${newState}`);
+      
+      if (newState === 'session_detected') {
+        inicio = false;
+        session_started = false;
+        showView('register');
+      } else if (newState === 'session_connected') {
+        inicio = false;
+        session_started = true;
+        // Primero verificar si el usuario ya tiene un perfil
+        checkUserProfile();
+      } else if (newState === 'profile_setup') {
+        showView('profileSetup');
+        loadGenresForSetup();
+      } else if (newState === 'profile_completed') {
+        showView('control');
+      } else if (newState === 'disconnected') {
+        inicio = true;
+        session_started = false;
+        selectedGenre = null;
+        selectedDecade = null;
+        userProfile = null;
+        showView('scanner');
+      }
+    }
+
+    // Funciones de selección de música
+    function selectGenre(genre) {
+      // Limpiar selección anterior
+      document.querySelectorAll('.genre-button').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+      
+      // Marcar el género seleccionado
+      document.querySelector(`[data-genre="${genre}"]`).classList.add('selected');
+      selectedGenre = genre;
+      
+      // Mostrar la selección de década
+      document.getElementById('decadeSelection').classList.remove('hidden');
+      
+      console.log('[Music] Género seleccionado:', genre);
+      updateSelectionSummary();
+    }
+
+    function selectDecade(decade) {
+      // Limpiar selección anterior
+      document.querySelectorAll('.decade-button').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+      
+      // Marcar la década seleccionada
+      document.querySelector(`[data-decade="${decade}"]`).classList.add('selected');
+      selectedDecade = decade;
+      
+      // Mostrar el botón de solicitar canciones
+      document.getElementById('requestSection').classList.remove('hidden');
+      
+      console.log('[Music] Década seleccionada:', decade);
+      updateSelectionSummary();
+    }
+
+    function updateSelectionSummary() {
+      const summary = document.getElementById('selectionSummary');
+      if (selectedGenre && selectedDecade) {
+        summary.textContent = `Selección: ${selectedGenre.toUpperCase()} de los ${selectedDecade.toUpperCase()}`;
+        summary.style.display = 'block';
+      } else if (selectedGenre) {
+        summary.textContent = `Género: ${selectedGenre.toUpperCase()} - Selecciona una época`;
+        summary.style.display = 'block';
+      } else {
+        summary.style.display = 'none';
+      }
+    }
+
+    async function requestCustomSongs() {
+      if (!sessionId || !clientId) {
+        showMessage('customStatus', 'Error: No hay sesión activa', 'error');
+        return;
+      }
+      
+      if (!selectedGenre || !selectedDecade) {
+        showMessage('customStatus', 'Error: Selecciona género y época primero', 'error');
+        return;
+      }
+      
+      try {
+        // Deshabilitar botón mientras se procesa
+        const button = document.getElementById('customButton');
+        button.disabled = true;
+        button.textContent = '🔄 Obteniendo canciones...';
+        
+        showMessage('customStatus', `🤖 Solicitando canciones de ${selectedGenre} de los ${selectedDecade}...`, 'info');
+        
+        const response = await fetch(`${baseUrl}/custom-songs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionId: sessionId,
+            clientId: clientId,
+            clientName: clientName,
+            genre: selectedGenre,
+            decade: selectedDecade
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[Custom] Response from backend:', data);
+          
+          showMessage('customStatus', `🎵 ${data.message}`, 'success');
+          showMessage('controlStatus', `🎸 Reproduciendo: ${data.selectedSong.track} - ${data.selectedSong.artist} (${data.selectedSong.year})`, 'success');
+          
+          // Mostrar información adicional
+          if (data.allSongs && data.allSongs.length > 1) {
+            setTimeout(() => {
+              const otherSongs = data.allSongs.slice(1).map(song => `${song.track} - ${song.artist}`).join(', ');
+              showMessage('customStatus', `Otras sugerencias: ${otherSongs}`, 'info');
+            }, 3000);
+          }
+          
+          setTimeout(() => {
+            document.getElementById('customStatus').textContent = '';
+            document.getElementById('controlStatus').textContent = '';
+          }, 8000);
+        } else {
+          const errorData = await response.json();
+          showMessage('customStatus', `Error: ${errorData.error || 'Error desconocido'}`, 'error');
+        }
+      } catch (error) {
+        console.error('[Custom] Error:', error);
+        showMessage('customStatus', 'Error de conexión al solicitar canciones', 'error');
+      } finally {
+        // Re-habilitar botón
+        const button = document.getElementById('customButton');
+        button.disabled = false;
+        button.textContent = '🎲 Obtener Canciones';
+      }
+    }
+
+    function showScanner() {
+      updateAppState('disconnected');
+    }
+
+    function disconnect() {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
+      
+      sessionId = null;
+      clientId = null;
+      clientName = null;
+      
+      updateAppState('disconnected');
+      showMessage('statusMessage', 'Desconectado. Escanea un nuevo QR para conectar.', 'info');
+    }
+
+    async function startRandomPlay() {
+      console.log('[Random] Iniciando reproducción aleatoria');
+      
+      if (!clientId || !sessionId) {
+        console.error('[Random] Error: No hay cliente o sesión activa');
+        showMessage('controlStatus', '❌ Error: No conectado al servidor', 'error');
+        return;
+      }
+      
+      // Deshabilitar botones mientras se procesa
+      const startMusicBtn = document.getElementById('startMusicBtn');
+      const anotherRandomBtn = document.getElementById('anotherRandomBtn');
+      
+      if (startMusicBtn) {
+        startMusicBtn.disabled = true;
+        startMusicBtn.textContent = '🎲 Buscando canción...';
+      }
+      
+      if (anotherRandomBtn) {
+        anotherRandomBtn.disabled = true;
+        anotherRandomBtn.textContent = '🎲 Buscando canción...';
+      }
+      
+      showMessage('controlStatus', '🎵 Seleccionando canción aleatoria...', 'info');
+      
+      try {
+        let selectedSong = null;
+        
+        console.log('[Random] === DEPURACIÓN DE SELECCIÓN DE CANCIÓN ===');
+        console.log('[Random] UserProfile existe:', !!userProfile);
+        if (userProfile) {
+          console.log('[Random] UserProfile.songs existe:', !!userProfile.songs);
+          console.log('[Random] Cantidad de canciones en perfil:', userProfile.songs ? userProfile.songs.length : 0);
+          if (userProfile.songs && userProfile.songs.length > 0) {
+            console.log('[Random] Primera canción del perfil:', userProfile.songs[0]);
+          }
+        }
+        
+        // Si hay perfil con canciones, usar esas canciones
+        if (userProfile && userProfile.songs && userProfile.songs.length > 0) {
+          console.log('[Random] ✅ Usando canciones del perfil:', userProfile.songs.length);
+          const randomIndex = Math.floor(Math.random() * userProfile.songs.length);
+          selectedSong = userProfile.songs[randomIndex];
+          console.log('[Random] ✅ Canción del perfil seleccionada (índice', randomIndex, '):', selectedSong);
+        } else {
+          console.log('[Random] ⚠️ No hay perfil con canciones, obteniendo canción aleatoria del servidor');
+          // Obtener una canción aleatoria del servidor (método original)
+          const response = await fetch(`${baseUrl}/songs/random/1`);
+          const data = await response.json();
+          
+          console.log('[Random] Respuesta del servidor:', data);
+          
+          if (data.success && data.songs && data.songs.length > 0) {
+            selectedSong = data.songs[0];
+            console.log('[Random] ✅ Canción del servidor seleccionada:', selectedSong);
+          } else {
+            console.log('[Random] ❌ Error en respuesta del servidor:', data);
+          }
+        }
+        
+        if (selectedSong) {
+          console.log('[Random] ✅ Canción seleccionada exitosamente:', selectedSong);
+          
+          // Mostrar información de la canción
+          updateCurrentSongInfo(selectedSong);
+          
+          // Enviar comando de reproducción con la canción específica
+          const playCommand = {
+            sessionId: sessionId,
+            clientId: clientId,
+            clientName: clientName,
+            action: 'play_random',
+            songData: {
+              title: selectedSong.title || selectedSong.name,
+              artist: selectedSong.artist,
+              searchQuery: selectedSong.primaryQuery || `${selectedSong.artist} ${selectedSong.title || selectedSong.name}`,
+              allQueries: selectedSong.searchQueries || [`${selectedSong.artist} ${selectedSong.title || selectedSong.name}`],
+              year: selectedSong.year,
+              genre: selectedSong.genre,
+              spotify_uri: selectedSong.spotify_uri
+            },
+            timestamp: Date.now()
+          };
+          
+          console.log('[Random] 📤 Enviando comando de reproducción:', playCommand);
+          
+          const commandResponse = await fetch(`${baseUrl}/commands`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(playCommand)
+          });
+          
+          const commandResult = await commandResponse.json();
+          console.log('[Random] 📥 Respuesta del comando:', commandResult);
+          
+          const songTitle = selectedSong.title || selectedSong.name;
+          showMessage('controlStatus', `🎵 Reproduciendo: "${songTitle}" por ${selectedSong.artist}`, 'success');
+          
+        } else {
+          console.log('[Random] ❌ No se pudo obtener ninguna canción');
+          throw new Error('No se pudo obtener una canción aleatoria');
+        }
+        
+      } catch (error) {
+        console.error('[Random] Error:', error);
+        showMessage('controlStatus', '❌ Error obteniendo canción aleatoria', 'error');
+      } finally {
+        // Rehabilitar botones
+        const startMusicBtn = document.getElementById('startMusicBtn');
+        const anotherRandomBtn = document.getElementById('anotherRandomBtn');
+        
+        if (startMusicBtn) {
+          startMusicBtn.disabled = false;
+          startMusicBtn.textContent = '🎲 Iniciar Música Aleatoria';
+        }
+        
+        if (anotherRandomBtn) {
+          anotherRandomBtn.disabled = false;
+          anotherRandomBtn.textContent = '🎲 Otra Canción Aleatoria';
+        }
+      }
+    }
+
+    function updateCurrentSongInfo(song) {
+      console.log('[UI] Actualizando información de canción:', song);
+      
+      // Ocultar el botón inicial y mostrar la sección de canción actual
+      const startMusicBtn = document.getElementById('startMusicBtn');
+      const currentSongDiv = document.getElementById('currentSongInfo');
+      
+      if (startMusicBtn) {
+        startMusicBtn.style.display = 'none';
+      }
+      
+      currentSongDiv.classList.remove('hidden');
+      
+      // Actualizar los detalles de la canción (manejar ambas estructuras)
+      const titleElement = currentSongDiv.querySelector('.song-title');
+      const artistElement = currentSongDiv.querySelector('.song-artist');
+      
+      const songTitle = song.title || song.name;
+      titleElement.textContent = songTitle;
+      artistElement.textContent = `por ${song.artist}` + (song.year ? ` (${song.year})` : '');
+    }
+
+    function sendCommand(action) {
+      console.log('[Command] Enviando comando:', action);
+      
+      if (!clientId || !sessionId) {
+        console.error('[Command] Error: No hay cliente o sesión activa');
+        showMessage('controlStatus', '❌ Error: No conectado al servidor', 'error');
+        return;
+      }
+      
+      // Enviar comando al servidor
+      fetch(`${baseUrl}/commands`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          clientId: clientId,
+          clientName: clientName,
+          action: action,
+          timestamp: Date.now()
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('[Command] Comando enviado exitosamente:', data);
+        showMessage('controlStatus', `✅ Comando "${action}" enviado`, 'success');
+      })
+      .catch(error => {
+        console.error('[Command] Error enviando comando:', error);
+        showMessage('controlStatus', `❌ Error enviando comando "${action}"`, 'error');
+      });
+    }
+
+    // Detectar si la página se está por recargar
+    window.addEventListener('beforeunload', (e) => {
+      console.log('[Mobile] ⚠️ PÁGINA SE VA A RECARGAR/CERRAR');
+      console.log('[Mobile] Estado actual - sessionId:', sessionId, 'clientId:', clientId);
+      console.log('[Mobile] Stack trace del beforeunload:', new Error().stack);
+      
+      // Si estamos en un estado crítico (perfil creado), prevenir la recarga
+      if (sessionId && clientId && (currentView === 'profileSetup' || currentView === 'control')) {
+        console.log('[Mobile] 🛑 PREVINIENDO RECARGA EN ESTADO CRÍTICO');
+        e.preventDefault();
+        e.returnValue = '¿Estás seguro de que quieres salir? Tu progreso se perderá.';
+        return '¿Estás seguro de que quieres salir? Tu progreso se perderá.';
+      }
+    });
+
+    // Interceptar CUALQUIER intento de navegación
+    window.addEventListener('popstate', (e) => {
+      console.log('[Mobile] ⚠️ EVENTO POPSTATE DETECTADO');
+      console.log('[Mobile] Estado:', e.state);
+      e.preventDefault();
+    });
+
+    // Interceptar clics en enlaces
+    document.addEventListener('click', (e) => {
+      if (e.target.tagName === 'A') {
+        console.log('[Mobile] ⚠️ CLIC EN ENLACE PREVENIDO');
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // Prevenir navegación accidental por teclas o eventos
+    document.addEventListener('keydown', (e) => {
+      // Prevenir F5, Ctrl+R, Ctrl+F5
+      if ((e.key === 'F5') || (e.ctrlKey && e.key === 'r') || (e.ctrlKey && e.key === 'R') || (e.ctrlKey && e.shiftKey && e.key === 'R')) {
+        console.log('[Mobile] ⚠️ Recarga por teclado prevenida');
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // Prevenir envío accidental de formularios
+    document.addEventListener('submit', (e) => {
+      console.log('[Mobile] ⚠️ Envío de formulario prevenido');
+      e.preventDefault();
+      return false;
+    });
+
+    // Inicialización básica
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('[Mobile] Iniciando aplicación móvil');
+      
+      // DESHABILITAR LIVE SERVER RELOAD - MÚLTIPLES MÉTODOS
+      try {
+        // Método 1: Bloquear la función reload
+        if (window.location && window.location.reload) {
+          const originalReload = window.location.reload;
+          window.location.reload = function(forceReload) {
+            if (sessionId && clientId) {
+              console.log('[Mobile] 🛑 RELOAD BLOQUEADO - hay sesión activa');
+              console.log('[Mobile] Estado:', { sessionId, clientId, currentView });
+              return false;
+            }
+            console.log('[Mobile] ⚠️ Permitiendo reload (no hay sesión activa)');
+            return originalReload.call(this, forceReload);
+          };
+        }
+        
+        // Método 2: Bloquear WebSocket de Live Server
+        if (window.WebSocket) {
+          const originalWebSocket = window.WebSocket;
+          window.WebSocket = function(url, protocols) {
+            console.log('[Mobile] � Interceptando WebSocket:', url);
+            if (url && (url.includes('/ws') || url.includes('live-server'))) {
+              console.log('[Mobile] 🚫 WebSocket de live server bloqueado');
+              // Crear un WebSocket dummy inerte
+              const dummySocket = {
+                close: () => console.log('[Mobile] Dummy WebSocket close() llamado'),
+                send: () => console.log('[Mobile] Dummy WebSocket send() llamado'),
+                onmessage: null,
+                onopen: null,
+                onclose: null,
+                onerror: null,
+                readyState: 3, // CLOSED
+                addEventListener: () => {},
+                removeEventListener: () => {}
+              };
+              return dummySocket;
+            }
+            return new originalWebSocket(url, protocols);
+          };
+        }
+        
+        console.log('[Mobile] ✅ Protección anti-reload configurada');
+      } catch (error) {
+        console.warn('[Mobile] ⚠️ Error configurando protección:', error);
+      }
+      
+      // Detectar URL del servidor automáticamente - COMENTADO para usar Azure
+      // await detectServerURL();
+      console.log('[Config] Usando URL fija de Azure:', baseUrl);
+      
+      // Comprobar si llegamos con parámetros de QR en la URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionParam = urlParams.get('session');
+      const nameParam = urlParams.get('name');
+      
+      if (sessionParam) {
+        // Llegamos desde QR, preparar datos pero NO conectar automáticamente
+        sessionId = sessionParam;
+        
+        console.log('[Mobile] Llegada desde QR, sesión detectada:', sessionId);
+        updateAppState('session_detected');
+        
+        // Si viene nombre en la URL, pre-llenarlo (pero ahora ya no viene)
+        const nameInput = document.getElementById('clientNameInput');
+        if (nameInput && nameParam) {
+          nameInput.value = nameParam;
+        }
+        
+        showMessage('statusMessage', '✅ Sesión detectada. Escribe tu nombre y haz clic en "Conectar".', 'success');
+      } else {
+        // Llegada directa, mostrar instrucciones
+        updateAppState('disconnected');
+        showMessage('statusMessage', '📱 Escanea el código QR desde la pantalla principal', 'info');
+      }
+      
+      // Configurar event handler para el botón de conectar
+      const registerBtn = document.getElementById('registerBtn');
+      if (registerBtn) {
+        registerBtn.addEventListener('click', connectToSession);
+      }
+      
+      // Configurar event handlers para todos los botones
+      // Usar setTimeout para asegurar que los elementos existan
+      setTimeout(() => {
+        // Botones de navegación
+        const backToScannerBtn = document.getElementById('backToScannerBtn');
+        if (backToScannerBtn) {
+          backToScannerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Nav] Botón volver al scanner clickeado');
+            showScanner();
+          });
+          console.log('[Nav] Event listener agregado a backToScannerBtn');
+        }
+        
+        const disconnectFromProfileBtn = document.getElementById('disconnectFromProfileBtn');
+        if (disconnectFromProfileBtn) {
+          disconnectFromProfileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Nav] Botón desconectar desde profile clickeado');
+            disconnect();
+          });
+          console.log('[Nav] Event listener agregado a disconnectFromProfileBtn');
+        }
+        
+        const disconnectFromControlBtn = document.getElementById('disconnectFromControlBtn');
+        if (disconnectFromControlBtn) {
+          disconnectFromControlBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Nav] Botón desconectar desde control clickeado');
+            disconnect();
+          });
+          console.log('[Nav] Event listener agregado a disconnectFromControlBtn');
+        }
+        
+        // Botones de perfil
+        const nextToYearsBtn = document.getElementById('nextToYears');
+        if (nextToYearsBtn) {
+          nextToYearsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Profile] Botón nextToYears clickeado');
+            createUserProfile();
+          });
+          console.log('[Profile] Event listener agregado a nextToYears');
+        }
+        
+        const createProfileBtn = document.getElementById('createProfileBtn');
+        if (createProfileBtn) {
+          createProfileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Profile] Botón createProfile clickeado');
+            createUserProfile();
+          });
+          console.log('[Profile] Event listener agregado a createProfileBtn');
+        }
+        
+        const goToMusicBtn = document.getElementById('goToMusicBtn');
+        if (goToMusicBtn) {
+          goToMusicBtn.addEventListener('click', (e) => {
+            console.log('[Profile] === CLIC EN BOTÓN goToMusic ===');
+            console.log('[Profile] Evento original:', e);
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            console.log('[Profile] Estado antes del clic - sessionId:', sessionId, 'clientId:', clientId);
+            console.log('[Profile] Ejecutando goToRandomPlayer...');
+            
+            try {
+              goToRandomPlayer();
+            } catch (error) {
+              console.error('[Profile] Error en goToRandomPlayer desde clic:', error);
+            }
+            
+            return false; // Asegurar que no hay navegación
+          });
+          console.log('[Profile] Event listener agregado a goToMusicBtn con protección máxima');
+        }
+        
+        // Botón principal para iniciar música
+        const startMusicBtn = document.getElementById('startMusicBtn');
+        if (startMusicBtn) {
+          startMusicBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Music] ====== BOTÓN INICIAR MÚSICA CLICKEADO ======');
+            console.log('[Music] Estado - sessionId:', sessionId, 'clientId:', clientId);
+            console.log('[Music] UserProfile existe:', !!userProfile);
+            if (userProfile) {
+              console.log('[Music] UserProfile songs:', userProfile.songs ? userProfile.songs.length : 'No songs array');
+            }
+            startRandomPlay();
+          });
+          console.log('[Music] Event listener agregado a startMusicBtn');
+        }
+        
+        // Botón de otra canción aleatoria
+        
+        const anotherRandomBtn = document.getElementById('anotherRandomBtn');
+        if (anotherRandomBtn) {
+          anotherRandomBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Music] ====== BOTÓN OTRA CANCIÓN ALEATORIA CLICKEADO ======');
+            console.log('[Music] Estado - sessionId:', sessionId, 'clientId:', clientId);
+            console.log('[Music] UserProfile existe:', !!userProfile);
+            if (userProfile) {
+              console.log('[Music] UserProfile songs:', userProfile.songs ? userProfile.songs.length : 'No songs array');
+            }
+            startRandomPlay();
+          });
+          console.log('[Music] Event listener agregado a anotherRandomBtn');
+        }
+        
+        // Controles de música
+        const previousBtn = document.getElementById('previousBtn');
+        if (previousBtn) {
+          previousBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Controls] Botón previous clickeado');
+            sendCommand('previous');
+          });
+          console.log('[Controls] Event listener agregado a previousBtn');
+        }
+        
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (pauseBtn) {
+          pauseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Controls] Botón pause clickeado');
+            sendCommand('pause');
+          });
+          console.log('[Controls] Event listener agregado a pauseBtn');
+        }
+        
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) {
+          playBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Controls] Botón play clickeado');
+            sendCommand('play');
+          });
+          console.log('[Controls] Event listener agregado a playBtn');
+        }
+        
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) {
+          nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[Controls] Botón next clickeado');
+            sendCommand('next');
+          });
+          console.log('[Controls] Event listener agregado a nextBtn');
+        }
+      }, 100);
+    });
+
+    // Función para conectar a la sesión
+    async function connectToSession() {
+      try {
+        // Obtener el nombre del campo de entrada
+        const nameInput = document.getElementById('clientNameInput');
+        if (!nameInput || !nameInput.value.trim()) {
+          showMessage('statusMessage', '❌ Por favor, escribe tu nombre antes de conectar', 'error');
+          return;
+        }
+        
+        // Verificar que tenemos una sesión
+        if (!sessionId) {
+          showMessage('statusMessage', '❌ No hay sesión detectada. Escanea el QR primero.', 'error');
+          return;
+        }
+        
+        clientName = nameInput.value.trim();
+        showMessage('statusMessage', `🔗 Conectando como: ${clientName}`, 'info');
+        
+        const response = await fetch(`${baseUrl}/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionId: sessionId,
+            clientName: clientName
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Conectado a sesión:', data);
+          
+          // Recibir el clientId generado por el servidor
+          clientId = data.clientId;
+          
+          // Cambiar a estado conectado
+          updateAppState('session_connected');
+          
+          showMessage('statusMessage', '✅ Conectado exitosamente', 'success');
+          showMessage('controlStatus', '🎵 Selecciona un género musical para comenzar', 'info');
+          
+          // Iniciar heartbeat
+          startHeartbeat();
+          
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al conectar');
+        }
+        
+      } catch (error) {
+        console.error('Error conectando:', error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        
+        let errorMessage = 'Error de conexión';
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          errorMessage = 'No se pudo conectar al servidor. Verifica que esté funcionando.';
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+        
+        showMessage('statusMessage', errorMessage, 'error');
+        
+        // Volver al scanner después de un delay
+        setTimeout(() => {
+          updateAppState('disconnected');
+        }, 3000);
+      }
+    }
+
+    function startHeartbeat() {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      
+      heartbeatInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`${baseUrl}/heartbeat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              sessionId: sessionId,
+              clientId: clientId
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Heartbeat failed');
+          }
+          
+        } catch (error) {
+          console.error('Heartbeat error:', error);
+          disconnect();
+        }
+      }, 30000); // Cada 30 segundos
+    }
+
+    // ========== FUNCIONES DEL PERFIL DE USUARIO ==========
+
+    // Verificar si el usuario ya tiene un perfil
+    async function checkUserProfile() {
+      try {
+        // Simular verificación de perfil existente
+        // En una implementación real, buscarías por clientId o sessionId
+        const hasProfile = localStorage.getItem(`profile_${clientId}`);
+        
+        if (hasProfile) {
+          userProfile = JSON.parse(hasProfile);
+          console.log('[Profile] Usuario ya tiene perfil:', userProfile);
+          updateAppState('profile_completed');
+        } else {
+          console.log('[Profile] Usuario necesita crear perfil');
+          updateAppState('profile_setup');
+        }
+      } catch (error) {
+        console.error('[Profile] Error verificando perfil:', error);
+        // Si hay error, ir al setup por seguridad
+        updateAppState('profile_setup');
+      }
+    }
+
+    // Cargar géneros disponibles para el setup
+    async function loadGenresForSetup() {
+      console.log('[Profile] loadGenresForSetup() iniciada');
+      try {
+        showMessage('profileSetupStatus', 'Cargando géneros disponibles...', 'info');
+        
+        console.log('[Profile] Haciendo fetch a:', `${baseUrl}/api/profiler/genres`);
+        const response = await fetch(`${baseUrl}/api/profiler/genres`);
+        const data = await response.json();
+        
+        console.log('[Profile] Respuesta del servidor:', data);
+        
+        if (data.success) {
+          availableGenres = data.genres;
+          console.log('[Profile] Géneros cargados:', availableGenres.length);
+          displayGenres();
+          showMessage('profileSetupStatus', '', '');
+        } else {
+          throw new Error(data.message || 'Error cargando géneros');
+        }
+      } catch (error) {
+        console.error('[Profile] Error cargando géneros:', error);
+        showMessage('profileSetupStatus', 'Error cargando géneros. Usando lista por defecto.', 'warning');
+        
+        // Lista por defecto si falla la API
+        availableGenres = ['salsa', 'merengue', 'blues', 'reggaeton', 'rock', 'pop', 'jazz'];
+        displayGenres();
+      }
+    }
+
+    // Mostrar géneros en la interfaz
+    function displayGenres() {
+      console.log('[Profile] displayGenres() iniciada');
+      console.log('[Profile] Géneros disponibles:', availableGenres);
+      
+      const container = document.getElementById('genresList');
+      if (!container) {
+        console.error('[Profile] Container genresList no encontrado!');
+        return;
+      }
+      
+      console.log('[Profile] Container encontrado:', container);
+      container.innerHTML = '';
+      
+      availableGenres.forEach(genre => {
+        const button = document.createElement('div');
+        button.className = 'selection-item';
+        button.textContent = genre.charAt(0).toUpperCase() + genre.slice(1);
+        button.onclick = () => toggleGenreSelection(genre, button);
+        container.appendChild(button);
+      });
+      
+      console.log(`[Profile] ${availableGenres.length} géneros agregados al container`);
+    }
+
+    // Toggle selección de género
+    function toggleGenreSelection(genre, element) {
+      if (selectedGenres.includes(genre)) {
+        // Deseleccionar
+        selectedGenres = selectedGenres.filter(g => g !== genre);
+        element.classList.remove('selected');
+      } else {
+        // Seleccionar
+        selectedGenres.push(genre);
+        element.classList.add('selected');
+      }
+      
+      // Mostrar botón de continuar si hay al menos un género seleccionado
+      const nextBtn = document.getElementById('nextToYears');
+      if (selectedGenres.length > 0) {
+        nextBtn.classList.remove('hidden');
+      } else {
+        nextBtn.classList.add('hidden');
+      }
+      
+      console.log('[Profile] Géneros seleccionados:', selectedGenres);
+    }
+
+    // Mostrar paso de años/décadas
+    async function showYearsStep() {
+      document.getElementById('genreStep').classList.add('hidden');
+      document.getElementById('yearsStep').classList.remove('hidden');
+      
+      // Cargar años disponibles
+      await loadYearsForSetup();
+    }
+
+    // Cargar años disponibles por género
+    async function loadYearsForSetup() {
+      try {
+        showMessage('profileSetupStatus', 'Cargando décadas disponibles...', 'info');
+        
+        // Construir parámetros con los géneros seleccionados
+        const genresParam = selectedGenres.length > 0 ? selectedGenres.join(',') : 'all';
+        console.log('[Profile] Cargando décadas para géneros:', genresParam);
+        
+        const response = await fetch(`${baseUrl}/api/profiler/years/decades?genres=${encodeURIComponent(genresParam)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // Usar decades_by_genre en lugar de all_decades
+          const decadesByGenre = data.decades_by_genre || {};
+          console.log('[Profile] Décadas por género cargadas:', decadesByGenre);
+          displayDecadesByGenre(decadesByGenre);
+          showMessage('profileSetupStatus', '', '');
+        } else {
+          throw new Error(data.message || 'Error cargando décadas');
+        }
+      } catch (error) {
+        console.error('[Profile] Error cargando décadas:', error);
+        showMessage('profileSetupStatus', 'Error cargando décadas. Usando lista por defecto.', 'warning');
+        
+        // Lista por defecto si falla la API
+        const defaultDecades = {};
+        selectedGenres.forEach(genre => {
+          defaultDecades[genre] = ['70s', '80s', '90s', '2000s', '2010s'];
+        });
+        displayDecadesByGenre(defaultDecades);
+      }
+    }
+
+    // Mostrar décadas agrupadas por género
+    function displayDecadesByGenre(decadesByGenre) {
+      const container = document.getElementById('genreDecadesList');
+      container.innerHTML = '';
+      
+      // Crear un grupo para cada género
+      Object.entries(decadesByGenre).forEach(([genre, decades]) => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'genre-decades-group';
+        
+        // Título del género
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'genre-title';
+        titleDiv.innerHTML = `🎵 ${genre.charAt(0).toUpperCase() + genre.slice(1)}:`;
+        groupDiv.appendChild(titleDiv);
+        
+        // Grid de décadas para este género
+        const decadesGrid = document.createElement('div');
+        decadesGrid.className = 'decades-grid';
+        
+        decades.forEach(decade => {
+          const button = document.createElement('div');
+          button.className = 'selection-item';
+          button.textContent = decade;
+          button.onclick = () => toggleDecadeSelection(genre, decade, button);
+          decadesGrid.appendChild(button);
+        });
+        
+        groupDiv.appendChild(decadesGrid);
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // Toggle selección de década por género
+    function toggleDecadeSelection(genre, decade, element) {
+      // Inicializar el array para el género si no existe
+      if (!selectedDecades[genre]) {
+        selectedDecades[genre] = [];
+      }
+      
+      if (selectedDecades[genre].includes(decade)) {
+        // Deseleccionar
+        selectedDecades[genre] = selectedDecades[genre].filter(d => d !== decade);
+        element.classList.remove('selected');
+        
+        // Si no quedan décadas para este género, eliminar el género
+        if (selectedDecades[genre].length === 0) {
+          delete selectedDecades[genre];
+        }
+      } else {
+        // Seleccionar
+        selectedDecades[genre].push(decade);
+        element.classList.add('selected');
+      }
+      
+      // Mostrar botón de crear perfil si hay al menos una década seleccionada
+      const createBtn = document.getElementById('createProfileBtn');
+      const hasSelections = Object.keys(selectedDecades).length > 0;
+      if (hasSelections) {
+        createBtn.classList.remove('hidden');
+      } else {
+        createBtn.classList.add('hidden');
+      }
+      
+      console.log('[Profile] Décadas seleccionadas por género:', selectedDecades);
+    }
+
+    // Crear perfil de usuario (simplificado - solo géneros)
+    async function createUserProfile() {
+      try {
+        console.log('[Profile] === INICIANDO CREACIÓN DE PERFIL ===');
+        console.log('[Profile] Estado actual - sessionId:', sessionId, 'clientId:', clientId);
+        console.log('[Profile] Heartbeat activo:', !!heartbeatInterval);
+        
+        // Mostrar paso de loading
+        document.getElementById('genreStep').classList.add('hidden');
+        document.getElementById('profileLoadingStep').classList.remove('hidden');
+        
+        const songsLimit = parseInt(document.getElementById('songsLimit').value);
+        
+        const profileData = {
+          name: clientName,
+          favorite_genres: selectedGenres,
+          favorite_decades: [], // Array vacío ya que no usamos décadas
+          songsLimit: songsLimit === -1 ? null : songsLimit
+        };
+        
+        console.log('[Profile] Enviando datos del perfil (solo géneros):', profileData);
+        console.log('[Profile] Géneros seleccionados:', selectedGenres);
+        console.log('[Profile] Límite de canciones:', songsLimit);
+        
+        // Simular llamada a la API
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        console.log('[Profile] Enviando request a:', `${baseUrl}/api/profiler/profiles`);
+        
+        const response = await fetch(`${baseUrl}/api/profiler/profiles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(profileData)
+        });
+        
+        console.log('[Profile] Response recibida, status:', response.status);
+        const data = await response.json();
+        console.log('[Profile] Data del perfil:', data);
+        
+        if (data.success) {
+          userProfile = data.profile;
+          console.log('[Profile] Perfil creado exitosamente:', userProfile.id);
+          console.log('[Profile] Perfil completo recibido:', userProfile);
+          console.log('[Profile] ¿Perfil tiene canciones?', !!userProfile.songs);
+          console.log('[Profile] Cantidad de canciones:', userProfile.songs ? userProfile.songs.length : 0);
+          console.log('[Profile] Estado después del perfil - sessionId:', sessionId, 'clientId:', clientId);
+          
+          // Guardar en localStorage para futuras sesiones
+          localStorage.setItem(`profile_${clientId}`, JSON.stringify(userProfile));
+          console.log('[Profile] Perfil guardado en localStorage');
+          
+          // Mostrar paso de éxito
+          showProfileSuccess();
+        } else {
+          throw new Error(data.message || 'Error creando perfil');
+        }
+        
+      } catch (error) {
+        console.error('[Profile] Error creando perfil:', error);
+        
+        // Crear perfil local como fallback (simplificado)
+        userProfile = {
+          id: `local_${clientId}`,
+          name: clientName,
+          favorite_genres: selectedGenres,
+          favorite_decades: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        localStorage.setItem(`profile_${clientId}`, JSON.stringify(userProfile));
+        showMessage('profileSetupStatus', 'Perfil creado localmente (servidor no disponible)', 'warning');
+        
+        setTimeout(() => {
+          showProfileSuccess();
+        }, 1000);
+      }
+    }
+
+    // Mostrar éxito de creación de perfil
+    function showProfileSuccess() {
+      console.log('[Profile] === MOSTRANDO ÉXITO DEL PERFIL ===');
+      console.log('[Profile] Estado en éxito - sessionId:', sessionId, 'clientId:', clientId);
+      console.log('[Profile] Heartbeat aún activo:', !!heartbeatInterval);
+      
+      document.getElementById('profileLoadingStep').classList.add('hidden');
+      document.getElementById('profileSuccessStep').classList.remove('hidden');
+      
+      // Mostrar resumen del perfil (solo géneros)
+      const summary = document.getElementById('profileSummary');
+      
+      summary.innerHTML = `
+        <h4>Tu perfil musical creado exitosamente!</h4>
+        <div>
+          <strong>Géneros favoritos:</strong><br>
+          ${selectedGenres.map(g => `<span class="tag">${g}</span>`).join('')}
+        </div>
+        <div style="margin-top: 15px;">
+          <p>🎵 Haz clic en el botón para ir al reproductor</p>
+          <p style="font-size: 0.9rem; color: #666;">Tu música personalizada te está esperando</p>
+        </div>
+      `;
+      
+      showMessage('profileSetupStatus', '', '');
+      
+      // NO AUTO-REDIRECT - solo manual para evitar problemas de navegación
+      console.log('[Profile] ✅ Perfil mostrado exitosamente, esperando clic manual');
+    }
+
+    // Ir al reproductor random con las canciones del perfil
+    function goToRandomPlayer() {
+      console.log('[Profile] === EJECUTANDO goToRandomPlayer ===');
+      console.log('[Profile] Estado en goToRandomPlayer - sessionId:', sessionId, 'clientId:', clientId);
+      
+      try {
+        // Verificar estado antes de continuar
+        if (!sessionId || !clientId) {
+          console.error('[Profile] ❌ Estado inválido en goToRandomPlayer');
+          return;
+        }
+        
+        console.log('[Profile] 🔄 Cambiando solo estado interno (sin navegación)');
+        
+        // SOLO cambiar estado interno - NO updateAppState que puede causar efectos secundarios
+        session_started = true;
+        currentView = 'control';
+        
+        // Cambiar directamente a la vista de control SIN navegación
+        console.log('[Profile] 🎵 Mostrando vista de control directamente');
+        showView('control');
+        
+        console.log('[Profile] ✅ Transición completada a control view SIN NAVEGACIÓN');
+        
+        // Si hay perfil con canciones, usar esas canciones para el random
+        if (userProfile && userProfile.songs && userProfile.songs.length > 0) {
+          console.log('[Profile] Usando canciones del perfil para random:', userProfile.songs.length);
+          // Las canciones del perfil se usarán en la función random
+        } else {
+          console.log('[Profile] No hay canciones en el perfil, usando todas las canciones');
+        }
+        
+        // Mostrar mensaje de éxito en la nueva vista
+        showMessage('controlStatus', '🎵 ¡Perfil listo! Haz clic en "Iniciar Aleatorio" para comenzar', 'success');
+        
+      } catch (error) {
+        console.error('[Profile] Error en goToRandomPlayer:', error);
+      }
+    }
+
+    // Función auxiliar para enviar comando de reproducción
+    async function sendPlayCommand(song) {
+      const playCommand = {
+        sessionId: sessionId,
+        clientId: clientId,
+        clientName: clientName,
+        action: 'play_random',
+        songData: {
+          title: song.title || song.name,
+          artist: song.artist,
+          searchQuery: song.primaryQuery || `${song.artist} ${song.title || song.name}`,
+          allQueries: song.searchQueries || [`${song.artist} ${song.title || song.name}`],
+          year: song.year,
+          genre: song.genre,
+          spotify_uri: song.spotify_uri
+        },
+        timestamp: Date.now()
+      };
+      
+      const commandResponse = await fetch(`${baseUrl}/commands`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(playCommand)
+      });
+      
+      const commandResult = await commandResponse.json();
+      console.log('[Recommendations] Comando enviado:', commandResult);
+      return commandResult;
+    }
+  </script>
+</body>
+</html>

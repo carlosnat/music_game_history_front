@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>🎵 Reproductor Musical Aleatorio</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Reset */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            font-family: 'Roboto', sans-serif;
+            background-color: #F5EFE6;
+            color: #333;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            height: 100vh;
+            width: 100vw;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .player-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #6D94C5;
+            font-weight: 500;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #6D94C5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: #5a7ca3;
+        }
+
+        button:disabled {
+            background: #896C6C;
+            cursor: not-allowed;
+        }
+
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .current-song {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #1DB954;
+        }
+
+        .current-song h3 {
+            color: #1DB954;
+            margin-bottom: 15px;
+        }
+
+        .song-details p {
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .song-details strong {
+            color: #333;
+            min-width: 80px;
+            display: inline-block;
+        }
+
+        .current-random-song {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            margin-top: 20px;
+        }
+
+        .current-random-song h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+        }
+
+        .random-song-details p {
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .random-song-details strong {
+            color: #333;
+            min-width: 80px;
+            display: inline-block;
+        }
+
+        .status p {
+            margin: 5px 0;
+            font-weight: 400;
+        }
+
+        .sidebar h2 {
+            color: #896C6C;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .clients-list {
+            list-style: none;
+        }
+
+        .clients-list li {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .clients-list li.active {
+            background: #6D94C5;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="player-section">
+            <h1>🎵 Reproductor Musical Aleatorio</h1>
+            
+            <div class="controls">
+                <button id="playRandomSong">🎲 Reproducir del Perfil (Sin Repetir)</button>
+            </div>
+
+            <!-- Información de la canción aleatoria actual -->
+            <div class="current-random-song" id="currentRandomSongInfo">
+                <h3>🎲 Canción Aleatoria Actual</h3>
+                <div class="random-song-details">
+                    <p><strong>Título:</strong> <span id="current-title">-</span></p>
+                    <p><strong>Artista:</strong> <span id="current-artist">-</span></p>
+                    <p><strong>Álbum:</strong> <span id="current-album">-</span></p>
+                    <p><strong>Año:</strong> <span id="current-year">-</span></p>
+                    <p><strong>Género:</strong> <span id="current-genre">-</span></p>
+                    <p><strong>URI:</strong> <span id="current-uri">-</span></p>
+                    <p><strong>Modo:</strong> <span id="current-mode">-</span></p>
+                </div>
+            </div>
+
+            <div class="status">
+                <p><strong>Estado del reproductor:</strong> <span id="playerStatus">Not connected</span></p>
+                <p><small><a href="#" id="reauthorizeLink" style="color: #666; text-decoration: none;">🔄 Re-autorizar con Spotify</a></small></p>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h2>Conectar Dispositivos</h2>
+            <div id="qrSection">
+                <p style="font-size: 0.9rem; margin-bottom: 10px; color: #666;">Escanea el QR con tu celular:</p>
+                <canvas id="qrcode" style="width: 150px; height: 150px; margin: 0 auto; display: block; border-radius: 8px;"></canvas>
+                <p id="sessionInfo" style="font-size: 0.8rem; margin-top: 8px; text-align: center; color: #896C6C;"></p>
+            </div>
+            
+            <h2 style="margin-top: 25px;">Dispositivos Conectados</h2>
+            <ul class="clients-list" id="clientsList">
+                <li>Esperando conexiones...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+    
+    <!-- Configuración global antes de cargar app.js -->
+    <script>
+        // Variables globales que necesita app.js
+        window.serverBaseURL = 'https://mysupermusicappgame.azurewebsites.net';
+        
+        // Función para actualizar la URL cuando se detecte la IP
+        window.updateServerBaseURL = function(newURL) {
+            window.serverBaseURL = newURL;
+            console.log('[Config] Server URL updated globally:', window.serverBaseURL);
+        };
+    </script>
+    
+    <script src="app.js"></script>
+    <script>
+        let spotifyPlayer = null;
+        let deviceId = null;
+        let pollingInterval = null;
+        let clientsPollingInterval = null;
+        let sessionId = null;
+        let serverBaseURL = 'https://mysupermusicappgame.azurewebsites.net'; // URL base del servidor
+
+        // Inicializar configuración - Ya no necesitamos detectar IP porque usamos Azure
+        async function initializeApp() {
+            console.log('[Config] Using Azure server URL:', serverBaseURL);
+            // Comentado: detección automática de IP local ya que ahora usamos Azure
+            /*
+            try {
+                const response = await fetch(`${serverBaseURL}/network-info`);
+                if (response.ok) {
+                    const networkInfo = await response.json();
+                    const newURL = `http://${networkInfo.localIP}:3001`;
+                    serverBaseURL = newURL;
+                    
+                    // Actualizar también la variable global para app.js
+                    if (window.updateServerBaseURL) {
+                        window.updateServerBaseURL(newURL);
+                    }
+                    
+                    console.log('[Config] Using dynamic server URL:', serverBaseURL);
+                } else {
+                    console.warn('[Config] Could not get network info, using localhost');
+                }
+            } catch (error) {
+                console.warn('[Config] Network info fetch failed, using localhost:', error.message);
+            }
+            */
+        }
+
+        // Generar sessionId único y crear QR
+        async function generateQRCode() {
+            sessionId = `session_${Date.now()}`; // Asignar a variable global
+            
+            console.log('[QR] Generating QR for session:', sessionId);
+            
+            try {
+                // Obtener URL dinámica del servidor
+                const response = await fetch(`${serverBaseURL}/generate-qr-url`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        frontPort: 5500 // Puerto del Live Server
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const connectUrl = data.mobileURL;
+                
+                console.log('[QR] Connect URL from server:', connectUrl);
+                console.log('[QR] Server detected IP:', data.localIP);
+                
+                // Actualizar baseUrl en mobile.html también
+                updateMobileBaseUrl(data.serverBaseURL);
+                
+                // Verificar si qrcode está disponible
+                if (typeof qrcode === 'undefined') {
+                    console.error('[QR] QRCode library not loaded');
+                    showQRFallback(connectUrl);
+                    return;
+                }
+                
+                const qr = qrcode(0, 'M');
+                qr.addData(connectUrl);
+                qr.make();
+                
+                // Crear el QR como imagen
+                const qrDiv = document.createElement('div');
+                qrDiv.innerHTML = qr.createImgTag(4, 8);
+                
+                const img = qrDiv.querySelector('img');
+                if (img) {
+                    img.style.width = '150px';
+                    img.style.height = '150px';
+                    img.style.borderRadius = '8px';
+                    img.style.border = '2px solid #6D94C5';
+                    
+                    const canvas = document.getElementById('qrcode');
+                    const parent = canvas.parentNode;
+                    parent.replaceChild(img, canvas);
+                    
+                    console.log('[QR] QR Code generated successfully');
+                    document.getElementById('sessionInfo').textContent = `Sesión: ${sessionId}`;
+                } else {
+                    throw new Error('Failed to create QR image');
+                }
+                
+            } catch (error) {
+                console.error('[QR] Error generating QR or connecting to server:', error);
+                // Fallback con IP fija si falla la detección automática
+                const fallbackUrl = `http://192.168.1.89:5500/spotify-test/front-b/mobile.html?session=${sessionId}&name=Usuario_Movil`;
+                showQRFallback(fallbackUrl);
+            }
+        }
+
+        // Función para actualizar baseUrl en mobile.html (placeholder)
+        function updateMobileBaseUrl(serverBaseURL) {
+            console.log('[Config] Server base URL detected:', serverBaseURL);
+            // En una implementación más completa, esto podría actualizar dinámicamente
+            // el mobile.html o enviar la URL via localStorage/sessionStorage
+        }
+
+        // Mostrar URL como texto si falla el QR
+        function showQRFallback(url) {
+            const qrSection = document.getElementById('qrSection');
+            qrSection.innerHTML = `
+                <p style="font-size: 0.9rem; margin-bottom: 10px; color: #666;">URL de conexión:</p>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; word-break: break-all; font-size: 0.8rem;">
+                    <a href="${url}" target="_blank" style="color: #6D94C5; text-decoration: none;">${url}</a>
+                </div>
+                <p id="sessionInfo" style="font-size: 0.8rem; margin-top: 8px; text-align: center; color: #896C6C;">Sesión: ${sessionId}</p>
+            `;
+        }
+
+        // Polling para obtener lista de clientes conectados
+        async function checkConnectedClients() {
+            if (!sessionId) {
+                console.log('[Clients] No sessionId available for checking clients');
+                return;
+            }
+            
+            try {
+                console.log('[Clients] Checking clients for session:', sessionId);
+                const response = await fetch(`${serverBaseURL}/clients?session=${sessionId}`);
+                const clients = await response.json();
+                
+                console.log('[Clients] Connected clients response:', clients);
+                updateClientsList(clients);
+            } catch (error) {
+                console.error('[Clients] Error checking clients:', error);
+            }
+        }
+
+        function updateClientsList(clients) {
+            const clientsList = document.getElementById('clientsList');
+            
+            if (clients.length === 0) {
+                clientsList.innerHTML = '<li>Esperando conexiones...</li>';
+                return;
+            }
+            
+            clientsList.innerHTML = clients.map(client => 
+                `<li class="active">
+                    <strong>${client.name}</strong><br>
+                    <small>Conectado hace ${Math.floor((Date.now() - client.lastSeen) / 1000)}s</small>
+                </li>`
+            ).join('');
+        }
+
+        function startClientsPolling() {
+            if (!clientsPollingInterval) {
+                console.log('[Clients] Starting clients polling...');
+                clientsPollingInterval = setInterval(checkConnectedClients, 3000); // Cada 3 segundos
+                checkConnectedClients(); // Ejecutar inmediatamente
+            }
+        }
+
+        // Función de utilidad para manejar tokens expirados de manera consistente
+        function handleTokenExpired(context = 'API') {
+            console.error(`[${context}] Token expired or invalid (401). Redirecting to re-authorize...`);
+            document.getElementById('playerStatus').textContent = 'Token expirado. Redirigiendo a Spotify...';
+            
+            // Eliminar token inválido
+            window.localStorage.removeItem('spotify_token');
+            
+            // Redirigir a autorización
+            if (window.initiateSpotifyAuth) {
+                setTimeout(() => {
+                    window.initiateSpotifyAuth();
+                }, 1000); // Pequeño delay para mostrar el mensaje
+            } else {
+                alert('Token expirado. Por favor recarga la página para re-autorizarte.');
+            }
+        }
+
+        // Variable global para guardar información completa de la canción actual
+        let currentSongInfo = {
+            title: '-',
+            artist: '-',
+            album: '-',
+            year: '-',
+            genre: '-',
+            uri: '-',
+            mode: '-'
+        };
+
+        // Función para actualizar la información de la canción actual
+        function updateCurrentSongInfo(updates, source = 'Unknown') {
+            console.log(`[SongInfo] Updating from ${source}:`, updates);
+            console.log(`[SongInfo] Current state before update:`, currentSongInfo);
+            
+            // Si es solo actualización de estado de reproducción de Spotify, solo actualizar modo
+            if (source === 'Spotify Playback Status') {
+                if (updates.mode) {
+                    currentSongInfo.mode = updates.mode;
+                    console.log(`[SongInfo] Updated playback mode only: "${updates.mode}"`);
+                }
+            } else {
+                // Para fuentes del backend (Random Song Selection) o Spotify Player State, actualizar información
+                console.log(`[SongInfo] Processing ${source} with full update logic`);
+                Object.keys(updates).forEach(key => {
+                    const newValue = updates[key];
+                    const currentValue = currentSongInfo[key];
+                    
+                    console.log(`[SongInfo] Processing ${key}: current="${currentValue}", new="${newValue}"`);
+                    
+                    // Actualizar TODOS los campos que vengan del backend o del reproductor de Spotify
+                    if (source === 'Random Song Selection' || source === 'Spotify Player State') {
+                        // Para selección aleatoria del backend o estado del reproductor, confiamos en los datos
+                        currentSongInfo[key] = newValue;
+                        console.log(`[SongInfo] ✅ ${source} update ${key}: "${currentValue}" -> "${newValue}"`);
+                    } else {
+                        // Para otras fuentes, aplicar validación
+                        if (key === 'mode') {
+                            currentSongInfo[key] = newValue;
+                            console.log(`[SongInfo] ✅ Updated ${key}: "${currentValue}" -> "${newValue}"`);
+                        } else if (newValue && 
+                            newValue !== '' && 
+                            newValue !== '-' && 
+                            newValue !== 'Unknown Title' && 
+                            newValue !== 'Unknown Artist' && 
+                            newValue !== 'Unknown Album' && 
+                            newValue !== 'Unknown Year' && 
+                            newValue !== 'Unknown Genre' &&
+                            newValue !== undefined &&
+                            newValue !== null) {
+                            currentSongInfo[key] = newValue;
+                            console.log(`[SongInfo] ✅ Updated ${key}: "${currentValue}" -> "${newValue}"`);
+                        } else {
+                            console.log(`[SongInfo] ❌ Skipped ${key}: invalid value "${newValue}"`);
+                        }
+                    }
+                });
+            }
+            
+            // Actualizar la UI con la información combinada
+            document.getElementById('current-title').textContent = currentSongInfo.title;
+            document.getElementById('current-artist').textContent = currentSongInfo.artist;
+            document.getElementById('current-album').textContent = currentSongInfo.album;
+            document.getElementById('current-year').textContent = currentSongInfo.year;
+            document.getElementById('current-genre').textContent = currentSongInfo.genre;
+            document.getElementById('current-uri').textContent = currentSongInfo.uri;
+            document.getElementById('current-mode').textContent = currentSongInfo.mode;
+            
+            console.log('[SongInfo] Final combined info:', currentSongInfo);
+            console.log('[SongInfo] UI UPDATE - year element gets:', `"${currentSongInfo.year}"`);
+            console.log('[SongInfo] UI UPDATE - genre element gets:', `"${currentSongInfo.genre}"`);
+        }
+
+        // Función para verificar comandos y perfiles del backend
+        async function checkForCommands() {
+            console.log('[Polling] Checking for commands...');
+            console.log('[Polling] Using serverBaseURL:', serverBaseURL);
+            try {
+                const response = await fetch(`${serverBaseURL}/commands`);
+                const command = await response.json();
+                
+                console.log('[Polling] Response from backend:', command);
+                console.log('[Polling] Command type:', command.type, 'Action:', command.action);
+                
+                // Agregar diagnóstico mejorado
+                if (command && command.type !== 'no_command') {
+                    console.log('[Polling] 🔍 DIAGNÓSTICO DE COMANDO:');
+                    console.log('[Polling] - Tipo:', command.type);
+                    console.log('[Polling] - Acción:', command.action);
+                    console.log('[Polling] - Cliente:', command.clientName);
+                    console.log('[Polling] - SessionId:', command.sessionId);
+                    console.log('[Polling] - Tiene songData:', !!command.songData);
+                    if (command.songData) {
+                        console.log('[Polling] - Canción:', command.songData.title, 'por', command.songData.artist);
+                    }
+                }
+                
+                if (command && command.type === 'play_track') {
+                    console.log('[Polling] ✅ Received play command:', command);
+                    const clientInfo = command.clientName ? ` desde ${command.clientName}` : '';
+                    document.getElementById('playerStatus').textContent = `Comando recibido${clientInfo}`;
+                    playTrackOnDevice(command.trackUri);
+                } else if (command && command.type === 'search_and_play') {
+                    console.log('[Polling] ✅ Received search and play command:', command);
+                    const clientInfo = command.clientName ? ` desde ${command.clientName}` : '';
+                    document.getElementById('playerStatus').textContent = `Buscando: ${command.track}${clientInfo}`;
+                    searchAndPlay(command.query, command.track, command.artist);
+                } else if (command && command.type === 'control' && command.action === 'play_random') {
+                    console.log('[Polling] ✅ Received random play command from mobile:', command);
+                    const clientInfo = command.clientName ? ` desde ${command.clientName}` : '';
+                    
+                    if (command.songData) {
+                        const songInfo = `${command.songData.title} por ${command.songData.artist}`;
+                        document.getElementById('playerStatus').textContent = `Reproduciendo: ${songInfo}${clientInfo}`;
+                        
+                        console.log('[Polling] � Processing mobile song data:', command.songData);
+                        
+                        // Usar función de búsqueda y reproducción con los datos del móvil
+                        await searchAndPlay(
+                            command.songData.searchQuery || `${command.songData.artist} ${command.songData.title}`,
+                            command.songData.title,
+                            command.songData.artist
+                        );
+                        
+                        // Actualizar información de la canción actual con datos del móvil
+                        updateCurrentSongInfo({
+                            title: command.songData.title,
+                            artist: command.songData.artist,
+                            album: 'Desde móvil',
+                            year: command.songData.year || '-',
+                            genre: command.songData.genre || '-',
+                            uri: command.songData.spotify_uri || '-',
+                            mode: 'Buscando en Spotify...'
+                        }, 'Mobile Command');
+                        
+                    } else {
+                        document.getElementById('playerStatus').textContent = `Comando de reproducción aleatoria recibido${clientInfo}`;
+                        console.log('[Polling] 🎯 No song data, falling back to profile random...');
+                        document.getElementById('playRandomSong').click();
+                    }
+                } else if (command && command.type === 'control_command') {
+                    console.log('[Polling] ✅ Received control command:', command);
+                    const clientInfo = command.clientName ? ` desde ${command.clientName}` : '';
+                    document.getElementById('playerStatus').textContent = `Comando "${command.action}" recibido${clientInfo}`;
+                    executeControlCommand(command.action);
+                } else if (command && command.type === 'control') {
+                    console.log('[Polling] ✅ Received control command:', command);
+                    const clientInfo = command.clientName ? ` desde ${command.clientName}` : '';
+                    document.getElementById('playerStatus').textContent = `Comando "${command.action}" recibido${clientInfo}`;
+                    executeControlCommand(command.action);
+                } else {
+                    console.log('[Polling] No valid commands pending. Received:', command);
+                }
+                
+                // Verificar perfiles cada 8 segundos
+                if (!window.lastProfileCheck || Date.now() - window.lastProfileCheck > 8000) {
+                    const foundProfile = await loadProfileSongs();
+                    window.lastProfileCheck = Date.now();
+                    if (foundProfile) {
+                        console.log('[Polling] ✅ Perfil actualizado');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('[Polling] Error checking commands:', error);
+            }
+        }
+
+        function startCommandPolling() {
+            if (!pollingInterval) {
+                console.log('[Polling] Starting command polling...');
+                pollingInterval = setInterval(checkForCommands, 2000); // Cada 2 segundos
+                // Ejecutar inmediatamente la primera vez
+                checkForCommands();
+            } else {
+                console.log('[Polling] Polling already active');
+            }
+        }
+
+        function stopCommandPolling() {
+            if (pollingInterval) {
+                console.log('[Polling] Stopping command polling...');
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        async function playTrackOnDevice(trackUri) {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token || !deviceId) {
+                console.error('[Play] No token or device ID available');
+                return;
+            }
+
+            console.log('[Play] Playing track:', trackUri, 'on device:', deviceId);
+            
+            try {
+                // Transferir reproducción al dispositivo del SDK
+                console.log('[Play] Transferring playback to device...');
+                const transferResponse = await fetch('https://api.spotify.com/v1/me/player', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        device_ids: [deviceId],
+                        play: true
+                    })
+                });
+
+                if (!transferResponse.ok) {
+                    if (transferResponse.status === 401) {
+                        handleTokenExpired('Play Transfer');
+                        return;
+                    }
+                    console.warn('[Play] Transfer response not OK:', transferResponse.status);
+                }
+
+                // Pequeño delay para asegurar que la transferencia se complete
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Reproducir la canción específica
+                console.log('[Play] Starting specific track...');
+                const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        uris: [trackUri]
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('[Play] Track started successfully');
+                    document.getElementById('playerStatus').textContent = 'Playing: ' + trackUri;
+                } else {
+                    if (response.status === 401) {
+                        handleTokenExpired('Play Start');
+                        return;
+                    }
+                    console.error('[Play] Error starting track:', response.status, await response.text());
+                }
+            } catch (error) {
+                console.error('[Play] Error:', error);
+            }
+        }
+
+        async function searchAndPlay(query, track, artist) {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                console.error('[Search] No token available');
+                document.getElementById('playerStatus').textContent = 'Error: No hay token de acceso';
+                return;
+            }
+
+            console.log('[Search] Searching for:', query);
+            
+            try {
+                // 1. Buscar la canción
+                const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&market=ES&limit=1`;
+                console.log('[Search] Search URL:', searchUrl);
+                
+                const searchResponse = await fetch(searchUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!searchResponse.ok) {
+                    if (searchResponse.status === 401) {
+                        handleTokenExpired('Search');
+                        return;
+                    }
+                    throw new Error(`Search failed: ${searchResponse.status}`);
+                }
+
+                const searchData = await searchResponse.json();
+                console.log('[Search] Search results:', searchData);
+                
+                if (!searchData.tracks || !searchData.tracks.items || searchData.tracks.items.length === 0) {
+                    console.error('[Search] No tracks found for query:', query);
+                    document.getElementById('playerStatus').textContent = `No se encontró: ${track}`;
+                    return;
+                }
+
+                const foundTrack = searchData.tracks.items[0];
+                console.log('[Search] Found track:', foundTrack.name, 'by', foundTrack.artists[0].name);
+                
+                // 2. Reproducir la canción usando la función existente
+                document.getElementById('playerStatus').textContent = `Reproduciendo: ${foundTrack.name} - ${foundTrack.artists[0].name}`;
+                await playTrackOnDevice(foundTrack.uri);
+                
+            } catch (error) {
+                console.error('[Search] Error:', error);
+                document.getElementById('playerStatus').textContent = `Error buscando: ${track}`;
+            }
+        }
+
+        async function playRandomSong(songData) {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                console.error('[Random] No token available');
+                document.getElementById('playerStatus').textContent = 'Error: No hay token de acceso';
+                return;
+            }
+
+            if (!songData) {
+                console.error('[Random] No song data provided');
+                document.getElementById('playerStatus').textContent = 'Error: No hay datos de la canción';
+                return;
+            }
+
+            console.log('[Random] ================================');
+            console.log('[Random] Playing random song:', songData);
+            console.log('[Random] Target song:', songData.title, 'by', songData.artist);
+            console.log('[Random] Has Spotify data:', !!songData.hasSpotifyData);
+            console.log('[Random] ================================');
+            
+            try {
+                // Primero pausar cualquier reproducción actual
+                try {
+                    await fetch('https://api.spotify.com/v1/me/player/pause', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    console.log('[Random] ⏸️ Paused current playback');
+                } catch (pauseError) {
+                    console.log('[Random] No active playback to pause (or error pausing)');
+                }
+
+                let trackToPlay = null;
+
+                // Si ya tenemos datos de Spotify, usar directamente
+                if (songData.hasSpotifyData && songData.spotify_uri) {
+                    console.log('[Random] 🎯 Using direct Spotify URI:', songData.spotify_uri);
+                    trackToPlay = {
+                        uri: songData.spotify_uri,
+                        name: songData.found_title || songData.title,
+                        artists: [{ name: songData.found_artist || songData.artist }],
+                        external_urls: { spotify: songData.spotify_url || '' }
+                    };
+                    
+                    document.getElementById('playerStatus').textContent = `🎵 Reproduciendo directamente: ${trackToPlay.name} - ${trackToPlay.artists[0].name}`;
+                } else {
+                    // Si no tiene datos de Spotify, buscar como antes
+                    console.log('[Random] 🔍 No Spotify data available, searching...');
+                    trackToPlay = await searchForTrack(songData, token);
+                }
+
+                if (!trackToPlay) {
+                    console.error('[Random] ❌ No track found to play');
+                    document.getElementById('playerStatus').textContent = `❌ No se pudo reproducir: "${songData.title}" de ${songData.artist}`;
+                    return;
+                }
+
+                // Verificar que tenemos un dispositivo activo antes de reproducir
+                await ensureDeviceActive(token);
+
+                // Reproducir la canción
+                console.log('[Random] 🎵 Playing track:', trackToPlay.uri);
+                console.log('[Random] Track details:', trackToPlay.name, 'by', trackToPlay.artists[0].name);
+                
+                const playResponse = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        uris: [trackToPlay.uri]
+                    })
+                });
+
+                if (playResponse.ok) {
+                    console.log('[Random] ✅ Successfully started playback');
+                    document.getElementById('playerStatus').textContent = `🎵 Reproduciendo: ${trackToPlay.name} - ${trackToPlay.artists[0].name}`;
+                } else {
+                    console.error('[Random] ❌ Failed to start playback:', playResponse.status);
+                    const errorText = await playResponse.text();
+                    console.error('[Random] Error details:', errorText);
+                    document.getElementById('playerStatus').textContent = '❌ Error al reproducir la canción';
+                }
+                
+            } catch (error) {
+                console.error('[Random] ❌ Error:', error);
+                document.getElementById('playerStatus').textContent = `❌ Error reproduciendo: ${songData.title}`;
+            }
+        }
+
+        async function searchForTrack(songData, token) {
+            console.log('[Random] 🔍 Searching for track in Spotify...');
+            
+            let foundTrack = null;
+            let searchAttempt = 0;
+            const maxAttempts = songData.allQueries ? songData.allQueries.length : 1;
+            
+            // Intentar con diferentes queries hasta encontrar la canción
+            while (!foundTrack && searchAttempt < maxAttempts) {
+                const currentQuery = songData.allQueries ? songData.allQueries[searchAttempt] : songData.searchQuery;
+                console.log(`[Random] 🔍 Search attempt ${searchAttempt + 1}/${maxAttempts}`);
+                console.log(`[Random] Query: "${currentQuery}"`);
+                
+                // Usar diferentes mercados y límites para mejorar los resultados
+                const markets = ['US', 'ES', 'GB', ''];
+                
+                for (const market of markets) {
+                    const marketParam = market ? `&market=${market}` : '';
+                    const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(currentQuery)}&type=track&limit=10${marketParam}`;
+                    console.log(`[Random] Trying market: ${market || 'no market'}`);
+                    
+                    const searchResponse = await fetch(searchUrl, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (searchResponse.ok) {
+                        const searchData = await searchResponse.json();
+                        const trackCount = searchData.tracks?.items?.length || 0;
+                        console.log(`[Random] Market ${market || 'global'}: ${trackCount} tracks found`);
+                        
+                        if (trackCount > 0) {
+                            // Log de los primeros resultados para debugging
+                            console.log('[Random] First 3 results:');
+                            searchData.tracks.items.slice(0, 3).forEach((track, index) => {
+                                console.log(`[Random]   ${index + 1}. "${track.name}" by ${track.artists[0].name}`);
+                            });
+                            
+                            // Buscar la mejor coincidencia
+                            foundTrack = findBestMatch(searchData.tracks.items, songData);
+                            if (foundTrack) {
+                                console.log(`[Random] ✅ Found matching track in market ${market || 'global'}:`, foundTrack.name, 'by', foundTrack.artists[0].name);
+                                break;
+                            }
+                        }
+                    } else {
+                        console.log(`[Random] Search failed for market ${market || 'global'}:`, searchResponse.status);
+                    }
+                }
+                
+                if (foundTrack) break;
+                searchAttempt++;
+            }
+
+            return foundTrack;
+        }
+
+        function findBestMatch(tracks, songData) {
+            console.log('[Random] 🎯 Finding best match among', tracks.length, 'tracks');
+            console.log('[Random] Target:', `"${songData.title}" by "${songData.artist}"`);
+            
+            const targetTitle = songData.title.toLowerCase().trim();
+            const targetArtist = songData.artist.toLowerCase().trim();
+            
+            // Función para normalizar texto (remover caracteres especiales)
+            const normalize = (text) => text.toLowerCase()
+                .replace(/[^\w\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            
+            const normalizedTargetTitle = normalize(targetTitle);
+            const normalizedTargetArtist = normalize(targetArtist);
+            
+            let bestMatch = null;
+            let bestScore = 0;
+            
+            for (let i = 0; i < tracks.length; i++) {
+                const track = tracks[i];
+                const trackTitle = track.name.toLowerCase().trim();
+                const trackArtist = track.artists[0].name.toLowerCase().trim();
+                const normalizedTrackTitle = normalize(trackTitle);
+                const normalizedTrackArtist = normalize(trackArtist);
+                
+                console.log(`[Random]   ${i + 1}. Checking: "${track.name}" by ${track.artists[0].name}`);
+                
+                let score = 0;
+                
+                // Coincidencia exacta del título (mayor puntuación)
+                if (normalizedTrackTitle === normalizedTargetTitle) {
+                    score += 100;
+                    console.log(`[Random]      ✅ Exact title match (+100)`);
+                } else if (normalizedTrackTitle.includes(normalizedTargetTitle)) {
+                    score += 50;
+                    console.log(`[Random]      ⚡ Title contains target (+50)`);
+                } else if (normalizedTargetTitle.includes(normalizedTrackTitle)) {
+                    score += 30;
+                    console.log(`[Random]      ⚡ Target contains title (+30)`);
+                }
+                
+                // Coincidencia exacta del artista
+                if (normalizedTrackArtist === normalizedTargetArtist) {
+                    score += 100;
+                    console.log(`[Random]      ✅ Exact artist match (+100)`);
+                } else if (normalizedTrackArtist.includes(normalizedTargetArtist)) {
+                    score += 50;
+                    console.log(`[Random]      ⚡ Artist contains target (+50)`);
+                } else if (normalizedTargetArtist.includes(normalizedTrackArtist)) {
+                    score += 30;
+                    console.log(`[Random]      ⚡ Target contains artist (+30)`);
+                }
+                
+                console.log(`[Random]      Score: ${score}`);
+                
+                // Requiere al menos una coincidencia parcial para considerar la canción
+                if (score >= 30 && score > bestScore) {
+                    bestMatch = track;
+                    bestScore = score;
+                    console.log(`[Random]      🏆 New best match! Score: ${score}`);
+                }
+            }
+            
+            if (bestMatch) {
+                console.log(`[Random] 🎯 Selected best match: "${bestMatch.name}" by ${bestMatch.artists[0].name} (Score: ${bestScore})`);
+                return bestMatch;
+            }
+            
+            // Si no hay coincidencias buenas, NO tomar la primera canción
+            console.log('[Random] ❌ No good matches found, returning null');
+            return null;
+        }
+
+        async function executeControlCommand(action) {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                console.error('[Control] No token available');
+                return;
+            }
+
+            console.log('[Control] Executing control command:', action);
+            
+            // Verificar que tengamos un dispositivo activo
+            if (!deviceId) {
+                console.error('[Control] No device ID available');
+                document.getElementById('playerStatus').textContent = 'Error: SDK no inicializado';
+                return;
+            }
+            
+            try {
+                // Primero, asegurar que el dispositivo esté activo
+                await ensureDeviceActive(token);
+                
+                let endpoint = '';
+                let method = 'PUT'; // La mayoría de comandos usan PUT
+                let body = null;
+
+                switch (action) {
+                    case 'play':
+                        endpoint = 'https://api.spotify.com/v1/me/player/play';
+                        method = 'PUT';
+                        // Para play simple, solo reanudar la reproducción actual
+                        // No forzar ninguna canción específica
+                        break;
+                    case 'pause':
+                        endpoint = 'https://api.spotify.com/v1/me/player/pause';
+                        method = 'PUT';
+                        break;
+                    case 'next':
+                        endpoint = 'https://api.spotify.com/v1/me/player/next';
+                        method = 'POST'; // next usa POST
+                        break;
+                    case 'previous':
+                        endpoint = 'https://api.spotify.com/v1/me/player/previous';
+                        method = 'POST'; // previous usa POST
+                        break;
+                    case 'shuffle':
+                        endpoint = 'https://api.spotify.com/v1/me/player/shuffle?state=true';
+                        method = 'PUT';
+                        break;
+                    case 'repeat':
+                        endpoint = 'https://api.spotify.com/v1/me/player/repeat?state=context';
+                        method = 'PUT';
+                        break;
+                    default:
+                        console.error('[Control] Unknown action:', action);
+                        return;
+                }
+
+                const response = await fetch(endpoint, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: body
+                });
+
+                if (response.ok || response.status === 204) {
+                    console.log('[Control] Command executed successfully:', action);
+                    document.getElementById('playerStatus').textContent = `Comando "${action}" ejecutado`;
+                    
+                    // Verificar estado del reproductor después del comando
+                    setTimeout(() => checkPlayerState(), 2000);
+                } else {
+                    const errorText = await response.text();
+                    console.error('[Control] Error executing command:', response.status, errorText);
+                    
+                    // Manejar error específico de no dispositivo activo
+                    if (response.status === 404 && errorText.includes('NO_ACTIVE_DEVICE')) {
+                        document.getElementById('playerStatus').textContent = 'Error: Dispositivo no activo. Usa "Reproducir Canción de Prueba" primero.';
+                    } else {
+                        document.getElementById('playerStatus').textContent = `Error en comando "${action}": ${response.status}`;
+                    }
+                }
+            } catch (error) {
+                console.error('[Control] Error:', error);
+                document.getElementById('playerStatus').textContent = `Error en comando "${action}"`;
+            }
+        }
+
+        // Nueva función para asegurar que el dispositivo esté activo
+        async function ensureDeviceActive(token) {
+            try {
+                console.log('[Control] Ensuring device is active...');
+                
+                // Transferir reproducción al dispositivo del SDK
+                const transferResponse = await fetch('https://api.spotify.com/v1/me/player', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        device_ids: [deviceId],
+                        play: false // No empezar a reproducir automáticamente
+                    })
+                });
+
+                if (!transferResponse.ok) {
+                    console.warn('[Control] Transfer response not OK:', transferResponse.status);
+                }
+                
+                // Pequeño delay para asegurar que la transferencia se complete
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                console.log('[Control] Device should now be active');
+            } catch (error) {
+                console.error('[Control] Error ensuring device active:', error);
+            }
+        }
+
+        async function checkPlayerState() {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) return;
+            
+            try {
+                console.log('[Player] Checking current player state...');
+                const response = await fetch('https://api.spotify.com/v1/me/player', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const state = await response.json();
+                    console.log('[Player] Current state:', state);
+                    
+                    if (state && state.item) {
+                        const isPlaying = state.is_playing ? '▶️' : '⏸️';
+                        const trackName = state.item.name;
+                        const artistName = state.item.artists[0].name;
+                        document.getElementById('playerStatus').textContent = 
+                            `${isPlaying} ${trackName} - ${artistName}`;
+                    } else {
+                        document.getElementById('playerStatus').textContent = 'No hay música activa';
+                    }
+                } else if (response.status === 204) {
+                    console.log('[Player] No content - player inactive');
+                    document.getElementById('playerStatus').textContent = 'Reproductor inactivo';
+                } else {
+                    console.log('[Player] Error checking state:', response.status);
+                }
+            } catch (error) {
+                console.error('[Player] Error checking state:', error);
+            }
+        }
+
+        function initializeSpotifySDK() {
+            console.log('[SDK] Initializing Spotify SDK...');
+            const token = window.localStorage.getItem('spotify_token');
+            console.log('[SDK] Using access token from localStorage:', token);
+            
+            if (!token) {
+                console.error('[SDK] No token found in localStorage. Please login first.');
+                return;
+            }
+
+            spotifyPlayer = new Spotify.Player({
+                name: 'Web Playback SDK Quick Start Player',
+                getOAuthToken: cb => {
+                    console.log('[SDK] getOAuthToken callback called. Returning token.');
+                    cb(token);
+                },
+                volume: 0.5
+            });
+
+            console.log('[SDK] Player instance created.');
+
+            // Ready
+            spotifyPlayer.addListener('ready', ({ device_id }) => {
+                console.log('[SDK] Ready event: Device ID', device_id);
+                deviceId = device_id;
+                document.getElementById('playerStatus').textContent = 'Player ready: ' + device_id;
+                startCommandPolling(); // Iniciar polling cuando el player esté listo
+                
+                // Verificar estado inicial
+                setTimeout(() => checkPlayerState(), 1000);
+            });
+
+            // Not Ready
+            spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+                console.log('[SDK] Not Ready event: Device ID has gone offline', device_id);
+            });
+
+            spotifyPlayer.addListener('player_state_changed', (state) => {
+                console.log('[SDK] Player state changed:', state);
+                
+                if (state) {
+                    const current_track = state.track_window.current_track;
+                    const isPlaying = !state.paused;
+                    const statusIcon = isPlaying ? '▶️' : '⏸️';
+                    
+                    // Actualizar estado del reproductor
+                    document.getElementById('playerStatus').textContent = 
+                        `${statusIcon} ${current_track.name} - ${current_track.artists[0].name}`;
+                    
+                    // ACTUALIZAR INFORMACIÓN COMPLETA DE LA CANCIÓN
+                    const spotifyTrackInfo = {
+                        title: current_track.name,
+                        artist: current_track.artists[0]?.name || 'Unknown Artist',
+                        album: current_track.album?.name || 'Unknown Album',
+                        uri: current_track.uri,
+                        mode: isPlaying ? 'Playing' : 'Paused'
+                        // Nota: Spotify no provee año y género directamente en el player state
+                    };
+                    
+                    console.log('[SDK] Updating song info from Spotify:', spotifyTrackInfo);
+                    updateCurrentSongInfo(spotifyTrackInfo, 'Spotify Player State');
+                    
+                    console.log('[SDK] Currently playing:', current_track.name, 'by', current_track.artists[0].name);
+                    console.log('[SDK] Is playing:', isPlaying);
+                } else {
+                    document.getElementById('playerStatus').textContent = 'No hay música reproduciéndose';
+                    // Actualizar solo el modo cuando no hay música
+                    updateCurrentSongInfo({ mode: 'Stopped' }, 'Spotify Playback Status');
+                }
+            });
+
+            spotifyPlayer.addListener('initialization_error', ({ message }) => {
+                console.error('[SDK] Initialization error:', message);
+            });
+
+            spotifyPlayer.addListener('authentication_error', ({ message }) => {
+                console.error('[SDK] Authentication error:', message);
+                handleTokenExpired('SDK');
+            });
+
+            spotifyPlayer.addListener('account_error', ({ message }) => {
+                console.error('[SDK] Account error:', message);
+            });
+
+            // Función para reproducir canción aleatoria del perfil (sin repetición)
+            document.getElementById('playRandomSong').onclick = async function () {
+                console.log('[RandomProfile] ===============================================');
+                console.log('[RandomProfile] RANDOM PROFILE SONG BUTTON CLICKED - STARTING PROCESS');
+                console.log('[RandomProfile] ===============================================');
+                
+                // Verificar autenticación
+                const token = window.localStorage.getItem('spotify_token');
+                console.log('[RandomProfile] Token check:', token ? 'Token exists' : 'No token found');
+                if (!token) {
+                    console.log('[RandomProfile] No hay token. Redirigiendo a Spotify para autenticación...');
+                    alert('🎵 Se requiere autenticación con Spotify. Serás redirigido para iniciar sesión.');
+                    if (window.initiateSpotifyAuth) {
+                        window.initiateSpotifyAuth();
+                    } else {
+                        console.error('[RandomProfile] Función de autenticación no disponible');
+                    }
+                    return;
+                }
+                
+                try {
+                    // Primero obtener el perfil actual
+                    console.log('[RandomProfile] 🔍 Buscando perfil actual...');
+                    const profileResponse = await fetch(`${serverBaseURL}/api/profiler/profiles`);
+                    
+                    if (!profileResponse.ok) {
+                        throw new Error('No se pudo obtener información del perfil');
+                    }
+                    
+                    const profileData = await profileResponse.json();
+                    
+                    if (!profileData.success || !profileData.profiles || profileData.profiles.length === 0) {
+                        alert('⚠️ No hay perfil creado. Crea tu perfil primero desde el móvil.');
+                        return;
+                    }
+                    
+                    // Obtener el perfil más reciente
+                    const currentProfile = profileData.profiles[profileData.profiles.length - 1];
+                    console.log('[RandomProfile] ✅ Perfil encontrado:', currentProfile.id);
+                    
+                    // Obtener canción aleatoria del perfil y eliminarla
+                    console.log('[RandomProfile] 🎲 Obteniendo canción aleatoria del perfil...');
+                    console.log('[RandomProfile] 📡 URL de solicitud:', `${serverBaseURL}/api/profiler/profiles/${currentProfile.id}/random-song`);
+                    
+                    const randomSongResponse = await fetch(`${serverBaseURL}/api/profiler/profiles/${currentProfile.id}/random-song`, {
+                        method: 'POST'
+                    });
+                    
+                    console.log('[RandomProfile] 📡 Status de respuesta:', randomSongResponse.status);
+                    
+                    if (!randomSongResponse.ok) {
+                        console.error('[RandomProfile] ❌ Error en respuesta HTTP:', randomSongResponse.status);
+                        throw new Error('Error obteniendo canción aleatoria del perfil');
+                    }
+                    
+                    const randomSongData = await randomSongResponse.json();
+                    console.log('[RandomProfile] 📊 Datos completos recibidos:', JSON.stringify(randomSongData, null, 2));
+                    
+                    if (!randomSongData.success) {
+                        console.error('[RandomProfile] ❌ Backend reportó error:', randomSongData.error);
+                        if (randomSongData.error === 'No songs available in profile') {
+                            alert('🎵 ¡Ya has escuchado todas las canciones de tu perfil! Crea un nuevo perfil para obtener más música.');
+                            // Actualizar la interfaz para mostrar que no hay canciones
+                            updateProfileSongsStatus('🎵 Todas las canciones reproducidas - Crea un nuevo perfil');
+                            return;
+                        }
+                        throw new Error(randomSongData.error || 'Error desconocido');
+                    }
+                    
+                    const selectedSong = randomSongData.song;
+                    console.log('[RandomProfile] ✅ Canción seleccionada:', selectedSong.name, '-', selectedSong.artist);
+                    console.log('[RandomProfile] 📊 Canciones restantes según backend:', randomSongData.remaining_songs);
+                    console.log('[RandomProfile] ✅ Canción YA eliminada del perfil automáticamente');
+                    
+                    // Preparar información de la canción para mostrar
+                    const songInfo = {
+                        title: selectedSong.name || 'Unknown Title',
+                        artist: selectedSong.artist || 'Unknown Artist',
+                        album: 'Profile Song', // Las canciones del perfil no tienen álbum específico
+                        year: selectedSong.year || 'Unknown Year',
+                        genre: selectedSong.genre || 'Unknown Genre',
+                        uri: selectedSong.spotify_uri || 'No URI',
+                        mode: 'Loading...',
+                        remainingSongs: randomSongData.remaining_songs
+                    };
+                    
+                    console.log('[RandomProfile] 🎵 Información de canción preparada:', JSON.stringify(songInfo, null, 2));
+                    
+                    // Actualizar la información de la canción actual
+                    updateCurrentSongInfo(songInfo, 'Profile Random Song');
+                    
+                    // Actualizar el contador de canciones en la interfaz
+                    refreshProfileSongs(); // Recargar la lista para mostrar el nuevo contador
+                    
+                    // Reproducir la canción
+                    if (selectedSong.spotify_uri) {
+                        updateCurrentSongInfo({ mode: 'Starting...' }, 'Playback Start');
+                        playTrackOnDevice(selectedSong.spotify_uri);
+                    } else {
+                        console.error('[RandomProfile] No URI found for song:', selectedSong);
+                        updateCurrentSongInfo({ mode: 'Error - No URI' }, 'Error');
+                        alert('Error: Canción sin URI - contactar al desarrollador');
+                    }
+                    
+                } catch (error) {
+                    console.error('[RandomProfile] Error:', error);
+                    alert('Error: ' + error.message);
+                }
+                
+                console.log('[RandomProfile] ===============================================');
+                console.log('[RandomProfile] RANDOM PROFILE SONG FUNCTION COMPLETED');
+                console.log('[RandomProfile] ===============================================');
+            };
+
+            console.log('[SDK] Connecting player...');
+            spotifyPlayer.connect();
+        }
+
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            console.log('[SDK] Spotify Web Playback SDK is ready.');
+            
+            // Verificar si ya hay token, y si no, informar que se necesita autorización
+            const token = window.localStorage.getItem('spotify_token');
+            console.log('[SDK] Checking for existing token...', !!token);
+            
+            if (token) {
+                console.log('[SDK] ✅ Token encontrado, inicializando SDK...');
+                initializeSpotifySDK();
+            } else {
+                console.log('[SDK] ⚠️ No hay token. El usuario necesita autorizar con Spotify.');
+                document.getElementById('playerStatus').textContent = 'No autorizado - haz clic en "Re-autorizar con Spotify"';
+                
+                // Hacer la re-autorización más visible
+                const reauthorizeLink = document.getElementById('reauthorizeLink');
+                if (reauthorizeLink) {
+                    reauthorizeLink.style.color = '#1DB954';
+                    reauthorizeLink.style.fontWeight = 'bold';
+                    reauthorizeLink.textContent = '🔄 Autorizar con Spotify (Requerido)';
+                }
+            }
+        };
+
+        // Función global para que app.js pueda llamarla tras OAuth
+        window.initializeSpotifySDK = initializeSpotifySDK;
+        
+        // Funciones globales para debugging
+        window.startPolling = startCommandPolling;
+        window.stopPolling = stopCommandPolling;
+        
+        // ===== SISTEMA DINÁMICO DE CANCIONES DEL PERFIL =====
+        
+        // Función para crear div dinámico de canciones del perfil
+        function createProfileSongsDiv() {
+            const statusDiv = document.querySelector('.status');
+            if (statusDiv && !document.getElementById('profileSongs')) {
+                const profileDiv = document.createElement('div');
+                profileDiv.id = 'profileSongs';
+                profileDiv.style.cssText = `
+                    margin-top: 20px;
+                    padding: 15px;
+                    background: #f9f9f9;
+                    border-radius: 8px;
+                    border-left: 4px solid #1db954;
+                `;
+                profileDiv.innerHTML = `
+                    <h3 style="margin: 0 0 10px 0; color: #333; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                        🎵 Canciones del Perfil
+                        <span id="profileSongsCount" style="font-size: 0.9rem; color: #666; font-weight: normal;"></span>
+                        <button id="refreshProfileSongs" onclick="refreshProfileSongs()" style="
+                            background: #1db954;
+                            border: none;
+                            color: white;
+                            border-radius: 50%;
+                            width: 15px;
+                            height: 15px;
+                            font-size: 10px;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.2s ease;
+                            margin-left: auto;
+                        " onmouseover="this.style.background='#1ed760'" onmouseout="this.style.background='#1db954'" title="Recargar canciones del perfil">
+                            ↻
+                        </button>
+                    </h3>
+                    <div id="profileSongsList" style="
+                        max-height: 400px;
+                        overflow-y: auto;
+                        background: white;
+                        border-radius: 6px;
+                        padding: 10px;
+                        border: 1px solid #e0e0e0;
+                    ">
+                        <p style="color: #666; font-style: italic;">� Verificando servidor...</p>
+                    </div>
+                `;
+                
+                // Insertar después del div de status
+                statusDiv.parentNode.insertBefore(profileDiv, statusDiv.nextSibling);
+                console.log('[ProfileSongs] ✅ Div dinámico de canciones del perfil creado');
+            }
+        }
+        
+        // Función para obtener y mostrar canciones del perfil
+        async function loadProfileSongs(forceRefresh = false) {
+            try {
+                console.log('[ProfileSongs] 🔍 Buscando perfiles creados...', forceRefresh ? '(RECARGA FORZADA)' : '');
+                
+                // Agregar timestamp para evitar caché del navegador en recargas manuales
+                const cacheParam = forceRefresh ? `?_t=${Date.now()}` : '';
+                const response = await fetch(`${serverBaseURL}/api/profiler/profiles${cacheParam}`);
+                
+                // Verificar si el servidor respondió correctamente
+                if (!response.ok) {
+                    console.warn('[ProfileSongs] ⚠️ Servidor no disponible:', response.status);
+                    updateProfileSongsStatus('🔄 Esperando servidor...');
+                    return false;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.profiles && data.profiles.length > 0) {
+                        // HAY PERFILES - obtener el más reciente
+                        const latestProfile = data.profiles[data.profiles.length - 1];
+                        console.log('[ProfileSongs] ✅ Perfil encontrado:', latestProfile.id);
+                        
+                        // Obtener detalles completos del perfil
+                        const detailCacheParam = forceRefresh ? `?_t=${Date.now()}` : '';
+                        const profileResponse = await fetch(`${serverBaseURL}/api/profiler/profiles/${latestProfile.id}${detailCacheParam}`);
+                        const profileData = await profileResponse.json();
+                        
+                        if (profileData.success && profileData.profile) {
+                            displayProfileSongs(profileData.profile);
+                            return true; // Indica que se encontró un perfil
+                        } else {
+                            console.warn('[ProfileSongs] ⚠️ Error obteniendo detalles del perfil');
+                            updateProfileSongsStatus('⚠️ Error obteniendo detalles del perfil');
+                            return false;
+                        }
+                    } else {
+                        // NO HAY PERFILES AÚN - estado normal de espera
+                        console.log('[ProfileSongs] ⏳ No hay perfiles creados aún');
+                        updateProfileSongsStatus('⏳ Esperando creación de perfil...');
+                        return false;
+                    }
+                } else {
+                    // RESPUESTA NO EXITOSA - posible error del backend
+                    console.warn('[ProfileSongs] ⚠️ Respuesta no exitosa del servidor:', data.message || 'Error desconocido');
+                    updateProfileSongsStatus('⚠️ Error del servidor de perfiles');
+                    return false;
+                }
+                
+            } catch (error) {
+                // ERROR DE RED O CONEXIÓN
+                console.error('[ProfileSongs] ❌ Error de conexión:', error);
+                
+                // Verificar si es error de red específico
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    updateProfileSongsStatus('🔌 Sin conexión al servidor');
+                } else {
+                    updateProfileSongsStatus('❌ Error cargando perfiles');
+                }
+                return false;
+            }
+        }
+        
+        // Función para mostrar las canciones del perfil
+        function displayProfileSongs(profile) {
+            const songsListDiv = document.getElementById('profileSongsList');
+            const songsCountSpan = document.getElementById('profileSongsCount');
+            
+            if (!songsListDiv || !songsCountSpan) return;
+            
+            const songs = profile.songs || [];
+            const genresText = profile.favorite_genres ? profile.favorite_genres.join(', ') : 'N/A';
+            
+            songsCountSpan.textContent = `(${songs.length} canciones - ${genresText})`;
+            
+            if (songs.length === 0) {
+                songsListDiv.innerHTML = '<p style="color: #666;">⚠️ No hay canciones en este perfil</p>';
+                return;
+            }
+            
+            // Agrupar canciones por género
+            const songsByGenre = {};
+            songs.forEach(song => {
+                const genre = song.genre || 'Sin género';
+                if (!songsByGenre[genre]) songsByGenre[genre] = [];
+                songsByGenre[genre].push(song);
+            });
+            
+            let html = '';
+            Object.entries(songsByGenre).forEach(([genre, genreSongs]) => {
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 8px 0; color: #1db954; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                            🎶 ${genre} (${genreSongs.length})
+                        </h4>
+                        <div style="margin-left: 10px;">
+                `;
+                
+                genreSongs.forEach(song => { // Mostrar TODAS las canciones
+                    html += `
+                        <div style="
+                            padding: 6px 8px;
+                            margin-bottom: 4px;
+                            background: #f8f8f8;
+                            border-radius: 4px;
+                            border-left: 2px solid #1db954;
+                            font-size: 0.85rem;
+                        ">
+                            <strong>${song.name || 'Sin título'}</strong><br>
+                            <span style="color: #666;">${song.artist || 'Artista desconocido'} ${song.year ? `(${song.year})` : ''}</span>
+                        </div>
+                    `;
+                });
+                
+                // Eliminamos el "... y X más" ya que mostramos todas
+                
+                html += '</div></div>';
+            });
+            
+            songsListDiv.innerHTML = html;
+            console.log('[ProfileSongs] ✅ Canciones mostradas:', songs.length);
+        }
+        
+        // Función para actualizar estado de carga
+        function updateProfileSongsStatus(message) {
+            const songsListDiv = document.getElementById('profileSongsList');
+            if (songsListDiv) {
+                songsListDiv.innerHTML = `<p style="color: #666; font-style: italic;">${message}</p>`;
+            }
+        }
+        
+        // Función para recargar manualmente las canciones del perfil
+        async function refreshProfileSongs() {
+            console.log('[ProfileSongs] 🔄 Recarga manual iniciada por el usuario');
+            
+            // Mostrar indicador de carga
+            updateProfileSongsStatus('🔄 Recargando canciones...');
+            
+            // Animar el botón de recarga
+            const refreshBtn = document.getElementById('refreshProfileSongs');
+            if (refreshBtn) {
+                refreshBtn.style.transform = 'rotate(360deg)';
+                refreshBtn.style.transition = 'transform 0.5s ease';
+                
+                // Resetear animación después de 500ms
+                setTimeout(() => {
+                    refreshBtn.style.transform = 'rotate(0deg)';
+                    refreshBtn.style.transition = 'transform 0.2s ease';
+                }, 500);
+            }
+            
+            // Cargar perfil nuevamente con timestamp para evitar caché
+            const success = await loadProfileSongs(true); // Pasar true para indicar recarga manual
+            
+            if (success) {
+                console.log('[ProfileSongs] ✅ Recarga manual exitosa');
+            } else {
+                console.log('[ProfileSongs] ⚠️ Recarga manual - no se encontraron perfiles nuevos');
+            }
+        }
+        
+        // ===== FIN SISTEMA DE CANCIONES DEL PERFIL =====
+
+        // Iniciar polling automáticamente cuando la página se carga
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('[App] DOM loaded, initializing app...');
+            
+            // 🎵 INICIALIZAR SISTEMA DE CANCIONES DEL PERFIL
+            createProfileSongsDiv();
+            
+            // Intentar cargar perfil existente después de 2 segundos
+            setTimeout(() => {
+                loadProfileSongs();
+            }, 2000);
+            
+            // Inicializar información de canción
+            updateCurrentSongInfo({
+                title: 'Ninguna canción seleccionada',
+                artist: 'Haz clic en el botón aleatorio',
+                album: '-',
+                year: '-',
+                genre: '-',
+                uri: '-',
+                mode: 'Ready'
+            }, 'App Init');
+            
+            // Configurar enlace de re-autorización
+            document.getElementById('reauthorizeLink').onclick = function(e) {
+                e.preventDefault();
+                console.log('[Auth] Manual re-authorization requested');
+                
+                // Mostrar mensaje inmediato al usuario
+                document.getElementById('playerStatus').textContent = 'Preparando autorización con Spotify...';
+                
+                // Eliminar token actual
+                window.localStorage.removeItem('spotify_token');
+                console.log('[Auth] Token eliminado del localStorage');
+                
+                // Forzar re-autorización
+                if (window.initiateSpotifyAuth) {
+                    console.log('[Auth] Iniciando proceso de autorización...');
+                    document.getElementById('playerStatus').textContent = 'Redirigiendo a Spotify para autorización...';
+                    
+                    // Pequeño delay para que el usuario vea el mensaje
+                    setTimeout(() => {
+                        window.initiateSpotifyAuth();
+                    }, 1000);
+                } else {
+                    console.error('[Auth] initiateSpotifyAuth no está disponible');
+                    alert('Función de autorización no disponible. Recarga la página.');
+                }
+            };
+            
+            // Inicializar configuración - Ya no detectamos IP porque usamos Azure
+            await initializeApp();
+            
+            setTimeout(() => {
+                startCommandPolling();
+                console.log('[App] Attempting to generate QR code...');
+                generateQRCode(); // Generar QR al cargar
+                startClientsPolling(); // Iniciar polling de clientes
+            }, 3000); // Aumentar a 3 segundos para que la librería QR se cargue
+        });
+    </script>
+</body>
+
+</html>
