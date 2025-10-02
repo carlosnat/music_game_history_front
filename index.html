@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Game - Unified App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-logo">🎵 Music Game</h1>
+            <div class="nav-menu">
+                <a href="/monitor" class="nav-link" data-route="/monitor">🖥️ Monitor</a>
+                <a href="/control" class="nav-link" data-route="/control">📱 Control</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container">
+        <!-- Loading State -->
+        <div id="loading" class="loading-container">
+            <div class="loading-spinner">🎵</div>
+            <p>Cargando...</p>
+        </div>
+
+        <!-- Home View -->
+        <div id="home-view" class="view hidden">
+            <div class="hero-section">
+                <h1>🎵 Bienvenido a Music Game</h1>
+                <p>Selecciona una opción para comenzar:</p>
+                <div class="home-buttons">
+                    <button onclick="navigateTo('/monitor')" class="home-btn monitor-btn">
+                        🖥️ Monitor
+                        <span>Gestión principal de música</span>
+                    </button>
+                    <button onclick="navigateTo('/control')" class="home-btn control-btn">
+                        📱 Control Móvil
+                        <span>Control remoto de música</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitor View -->
+        <div id="monitor-view" class="view hidden">
+            <!-- Monitor content will be loaded here -->
+        </div>
+
+        <!-- Control View -->
+        <div id="control-view" class="view hidden">
+            <!-- Control content will be loaded here -->
+        </div>
+
+        <!-- 404 View -->
+        <div id="not-found-view" class="view hidden">
+            <div class="error-container">
+                <h1>404</h1>
+                <p>Página no encontrada</p>
+                <button onclick="navigateTo('/')" class="btn">🏠 Ir al inicio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="router.js"></script>
+    <script src="monitor.js"></script>
+    <script src="control.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
