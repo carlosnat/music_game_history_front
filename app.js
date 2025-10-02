@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar router
     window.router = new Router();
     
-    // Configuración global
-    window.appConfig = {
+    // Configuración global (ahora viene de config.js)
+    window.appConfig = window.AppConfig || {
         serverURL: 'https://mysupermusicappgame.azurewebsites.net',
         version: '1.0.0',
         appName: 'Music Game Unified'

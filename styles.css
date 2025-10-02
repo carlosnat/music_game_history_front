@@ -382,6 +382,23 @@ input:focus, select:focus, textarea:focus {
     border-radius: 20px;
     font-weight: 500;
     font-size: 0.9rem;
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-indicator.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-indicator.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-indicator.warning {
+    background: #fff3cd;
+    color: #856404;
 }
 
 .monitor-stats {

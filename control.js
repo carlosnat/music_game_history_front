@@ -1,6 +1,6 @@
 // ===== COMPONENTE CONTROL =====
 window.ControlApp = {
-    baseUrl: 'https://mysupermusicappgame.azurewebsites.net',
+    baseUrl: window.AppConfig?.SERVER_URL || 'https://mysupermusicappgame.azurewebsites.net',
     currentView: 'scanner',
     sessionId: null,
     clientId: null,

@@ -1,15 +1,17 @@
 // ===== COMPONENTE MONITOR =====
 window.MonitorApp = {
-    serverBaseURL: 'https://mysupermusicappgame.azurewebsites.net',
+    serverBaseURL: window.AppConfig?.SERVER_URL || 'https://mysupermusicappgame.azurewebsites.net',
     sessionId: null,
     pollingInterval: null,
     clientsPollingInterval: null,
+    connectivityInterval: null,
     currentSongInfo: null,
     
     init() {
         console.log('[Monitor] Inicializando monitor...');
         this.render();
         this.setupEventListeners();
+        this.checkServerConnectivity();
         this.generateQRCode();
         this.startPolling();
     },
@@ -156,20 +158,51 @@ window.MonitorApp = {
     },
     
     startPolling() {
+        // Verificar disponibilidad de endpoints primero
+        this.checkEndpointAvailability();
+        
+        // Verificación de conectividad periódica
+        this.connectivityInterval = setInterval(() => {
+            this.checkServerConnectivity();
+        }, window.AppConfig?.POLLING?.CONNECTIVITY || 30000);
+        
         // Polling de comandos
         this.pollingInterval = setInterval(() => {
             this.checkForCommands();
-        }, 2000);
+        }, window.AppConfig?.POLLING?.COMMANDS || 5000);
         
         // Polling de clientes
         this.clientsPollingInterval = setInterval(() => {
             this.updateClientsList();
-        }, 3000);
+        }, window.AppConfig?.POLLING?.CLIENTS || 10000);
+    },
+    
+    async checkEndpointAvailability() {
+        try {
+            // Verificar endpoint /clients
+            const clientsResponse = await fetch(`${this.serverBaseURL}/clients`);
+            if (!clientsResponse.ok) {
+                console.warn('[Monitor] /clients endpoint not available, disabling client polling');
+                if (this.clientsPollingInterval) {
+                    clearInterval(this.clientsPollingInterval);
+                    this.clientsPollingInterval = null;
+                }
+                this.handleClientsError(clientsResponse.status);
+            }
+        } catch (error) {
+            console.warn('[Monitor] Server connectivity check failed:', error.message);
+        }
     },
     
     async checkForCommands() {
         try {
             const response = await fetch(`${this.serverBaseURL}/commands`);
+            
+            if (!response.ok) {
+                // Silencioso para commands ya que puede ser normal no tener comandos
+                return;
+            }
+            
             const command = await response.json();
             
             if (command && command.command) {
@@ -177,17 +210,34 @@ window.MonitorApp = {
                 this.updateCommandDisplay(command);
             }
         } catch (error) {
-            console.error('[Monitor] Error checking commands:', error);
+            // Logging más silencioso para commands
+            console.debug('[Monitor] Commands endpoint not available:', error.message);
         }
     },
     
     async updateClientsList() {
         try {
             const response = await fetch(`${this.serverBaseURL}/clients`);
-            const clients = await response.json();
+            
+            // Verificar si la respuesta es exitosa
+            if (!response.ok) {
+                console.warn(`[Monitor] Server returned ${response.status} for /clients`);
+                this.handleClientsError(response.status);
+                return;
+            }
+            
+            const data = await response.json();
+            
+            // Validar que data sea un array
+            const clients = Array.isArray(data) ? data : (data.clients && Array.isArray(data.clients) ? data.clients : []);
             
             const clientsList = document.getElementById('clients-list');
             const connectedCount = document.getElementById('connected-clients');
+            
+            if (!clientsList || !connectedCount) {
+                console.warn('[Monitor] Client list elements not found');
+                return;
+            }
             
             if (clients.length === 0) {
                 clientsList.innerHTML = '<p class="text-muted">No hay clientes conectados</p>';
@@ -195,14 +245,34 @@ window.MonitorApp = {
             } else {
                 clientsList.innerHTML = clients.map(client => `
                     <div class="client-item">
-                        <strong>${client.name}</strong>
-                        <small>${client.id.slice(-8)}</small>
+                        <strong>${client.name || 'Cliente sin nombre'}</strong>
+                        <small>${(client.id || 'unknown').toString().slice(-8)}</small>
                     </div>
                 `).join('');
                 connectedCount.textContent = clients.length;
             }
         } catch (error) {
             console.error('[Monitor] Error updating clients:', error);
+            this.handleClientsError('network');
+        }
+    },
+    
+    handleClientsError(errorType) {
+        const clientsList = document.getElementById('clients-list');
+        const connectedCount = document.getElementById('connected-clients');
+        
+        if (clientsList) {
+            if (errorType === 400) {
+                clientsList.innerHTML = '<p class="text-muted error">⚠️ Endpoint /clients no disponible</p>';
+            } else if (errorType === 'network') {
+                clientsList.innerHTML = '<p class="text-muted error">🔌 Error de conexión</p>';
+            } else {
+                clientsList.innerHTML = '<p class="text-muted error">❌ Error cargando clientes</p>';
+            }
+        }
+        
+        if (connectedCount) {
+            connectedCount.textContent = '-';
         }
     },
     
@@ -285,12 +355,43 @@ window.MonitorApp = {
         status.className = `status-message ${type}`;
     },
     
+    async checkServerConnectivity() {
+        const statusElement = document.getElementById('connection-status');
+        
+        try {
+            // Probar conectividad básica al servidor
+            const response = await fetch(`${this.serverBaseURL}/`, { 
+                method: 'HEAD',
+                cache: 'no-cache'
+            });
+            
+            if (response.ok || response.status === 404) {
+                // 404 es OK, significa que el servidor responde pero la ruta no existe
+                statusElement.textContent = '🟢 Conectado';
+                statusElement.className = 'status-indicator success';
+                console.log('[Monitor] Servidor conectado');
+            } else {
+                throw new Error(`Server responded with ${response.status}`);
+            }
+        } catch (error) {
+            console.warn('[Monitor] Error de conectividad:', error.message);
+            statusElement.textContent = '🔴 Sin conexión';
+            statusElement.className = 'status-indicator error';
+            
+            // Mostrar mensaje al usuario
+            this.updateStatus('No se puede conectar al servidor. Algunas funciones pueden no estar disponibles.', 'warning');
+        }
+    },
+    
     destroy() {
         if (this.pollingInterval) {
             clearInterval(this.pollingInterval);
         }
         if (this.clientsPollingInterval) {
             clearInterval(this.clientsPollingInterval);
+        }
+        if (this.connectivityInterval) {
+            clearInterval(this.connectivityInterval);
         }
     }
 };
