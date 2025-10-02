@@ -29,7 +29,8 @@ window.MonitorApp = {
         if (code) {
             console.log('[OAuth] Código recibido, intercambiando por token...');
             
-            const REDIRECT_URI = window.location.origin + window.location.pathname;
+            // Usar el mismo REDIRECT_URI que se envió a Spotify
+            const REDIRECT_URI = window.location.origin + '/fronts/';
             
             fetch(`${this.serverBaseURL}/auth/spotify`, {
                 method: 'POST',
@@ -41,8 +42,8 @@ window.MonitorApp = {
                 if (data.access_token) {
                     console.log('[OAuth] ✅ Token recibido y autenticado con Spotify!');
                     window.localStorage.setItem('spotify_token', data.access_token);
-                    // Limpiar el code de la URL
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Limpiar el code de la URL y redirigir al monitor
+                    window.history.replaceState({}, document.title, '/fronts/#/monitor');
                     this.updateStatus('Conectado a Spotify exitosamente', 'success');
                 } else {
                     console.error('[OAuth] Error al obtener token:', data.error || '');
@@ -474,7 +475,8 @@ window.MonitorApp = {
     initiateSpotifyAuth() {
         // Usar el flujo OAuth correcto como en app.js
         const CLIENT_ID = 'e074f26de1da44d7a8da4c2c7ab9af4e';
-        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        // Corregir REDIRECT_URI para que apunte a la ruta correcta del SPA
+        const REDIRECT_URI = window.location.origin + '/fronts/';
         const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
         const RESPONSE_TYPE = 'code';
         const SCOPES = [
@@ -487,6 +489,7 @@ window.MonitorApp = {
         
         const url = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPES)}`;
         console.log('[Auth] Redirigiendo a Spotify para autenticación...');
+        console.log('[Auth] REDIRECT_URI:', REDIRECT_URI);
         window.location.href = url;
     },
     
