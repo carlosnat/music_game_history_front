@@ -9,12 +9,58 @@ window.MonitorApp = {
     
     init() {
         console.log('[Monitor] Inicializando monitor...');
+        
+        // Manejar código OAuth si existe
+        this.handleOAuthCode();
+        
         this.render();
         this.setupEventListeners();
         this.checkServerConnectivity();
         this.loadStats();
         this.generateQRCode();
         this.startPolling();
+    },
+    
+    // Manejo del código OAuth de Spotify
+    handleOAuthCode() {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        
+        if (code) {
+            console.log('[OAuth] Código recibido, intercambiando por token...');
+            
+            const REDIRECT_URI = window.location.origin + window.location.pathname;
+            
+            fetch(`${this.serverBaseURL}/auth/spotify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.access_token) {
+                    console.log('[OAuth] ✅ Token recibido y autenticado con Spotify!');
+                    window.localStorage.setItem('spotify_token', data.access_token);
+                    // Limpiar el code de la URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    this.updateStatus('Conectado a Spotify exitosamente', 'success');
+                } else {
+                    console.error('[OAuth] Error al obtener token:', data.error || '');
+                    this.updateStatus('Error al conectar con Spotify', 'error');
+                }
+            })
+            .catch(err => {
+                console.error('[OAuth] Error de red:', err);
+                this.updateStatus('Error de conexión con Spotify', 'error');
+            });
+        } else {
+            // Verificar si ya tenemos token
+            const existingToken = window.localStorage.getItem('spotify_token');
+            if (existingToken) {
+                console.log('[Auth] ✅ Token existente encontrado.');
+                this.updateStatus('Spotify ya conectado', 'success');
+            }
+        }
     },
     
     render() {
@@ -426,8 +472,22 @@ window.MonitorApp = {
     
     // Métodos de Spotify (simplificados)
     initiateSpotifyAuth() {
-        const authUrl = `${this.serverBaseURL}/auth/spotify`;
-        window.location.href = authUrl;
+        // Usar el flujo OAuth correcto como en app.js
+        const CLIENT_ID = 'e074f26de1da44d7a8da4c2c7ab9af4e';
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
+        const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
+        const RESPONSE_TYPE = 'code';
+        const SCOPES = [
+            'streaming',
+            'user-read-email',
+            'user-read-private',
+            'user-modify-playback-state',
+            'user-read-playback-state'
+        ].join(' ');
+        
+        const url = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPES)}`;
+        console.log('[Auth] Redirigiendo a Spotify para autenticación...');
+        window.location.href = url;
     },
     
     async playRandomSong() {
