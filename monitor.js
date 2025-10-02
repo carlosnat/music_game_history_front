@@ -10,15 +10,16 @@ window.MonitorApp = {
     init() {
         console.log('[Monitor] Inicializando monitor...');
         
-        // Solo manejar OAuth si no se manejó ya en app.js
-        // (app.js limpia el código de la URL después de procesarlo)
+        // Primero renderizar la interfaz
+        this.render();
+        this.setupEventListeners();
+        
+        // Luego verificar token y otros procesos que necesitan el DOM
         const params = new URLSearchParams(window.location.search);
         if (!params.get('code')) {
             this.checkExistingToken();
         }
         
-        this.render();
-        this.setupEventListeners();
         this.checkServerConnectivity();
         this.loadStats();
         this.generateQRCode();
@@ -518,8 +519,12 @@ window.MonitorApp = {
     
     updateStatus(message, type = 'info') {
         const status = document.getElementById('player-status');
-        status.textContent = message;
-        status.className = `status-message ${type}`;
+        if (status) {
+            status.textContent = message;
+            status.className = `status-message ${type}`;
+        } else {
+            console.warn('[Monitor] updateStatus: elemento player-status no encontrado');
+        }
     },
     
     async checkServerConnectivity() {
