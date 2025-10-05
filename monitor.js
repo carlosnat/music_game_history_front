@@ -365,21 +365,41 @@ window.MonitorApp = {
             const data = await response.json();
             console.log('[Monitor] Commands response:', data);
             
-            // Manejar diferentes formatos de respuesta
+            // Manejar diferentes formatos de respuesta del servidor
+            if (data && data.type === 'no_command') {
+                console.debug('[Monitor] No hay comandos pendientes');
+                return;
+            }
+            
+            // Comando individual con estructura {command: "action", ...}
             if (data && data.command) {
-                console.log('[Monitor] Processing single command:', data.command);
+                console.log('[Monitor] 🎯 Processing single command:', data.command);
                 this.handleCommand(data);
                 this.updateCommandDisplay(data);
-            } else if (data && Array.isArray(data.commands)) {
-                console.log('[Monitor] Processing multiple commands:', data.commands.length);
+            } 
+            // Array de comandos
+            else if (data && Array.isArray(data.commands)) {
+                console.log('[Monitor] 📋 Processing multiple commands:', data.commands.length);
                 data.commands.forEach(command => {
                     this.handleCommand(command);
                     this.updateCommandDisplay(command);
                 });
-            } else if (data && data.success && data.message) {
-                console.log('[Monitor] Server response:', data.message);
-            } else {
-                console.debug('[Monitor] No commands to process');
+            }
+            // Comando con estructura {action: "command", ...}
+            else if (data && data.action) {
+                console.log('[Monitor] 🎯 Processing action command:', data.action);
+                // Convertir formato action a command para compatibilidad
+                const commandData = { ...data, command: data.action };
+                this.handleCommand(commandData);
+                this.updateCommandDisplay(commandData);
+            }
+            // Respuesta de éxito sin comando específico
+            else if (data && data.success && data.message) {
+                console.log('[Monitor] ✅ Server response:', data.message);
+            } 
+            // Formato desconocido
+            else {
+                console.debug('[Monitor] ⚠️ Formato de comando no reconocido:', data);
             }
         } catch (error) {
             console.debug('[Monitor] Commands check failed:', error.message);
@@ -434,21 +454,34 @@ window.MonitorApp = {
     },
     
     handleCommand(command) {
-        console.log('[Monitor] Handling command:', command);
+        console.log('[Monitor] 🎯 MANEJANDO COMANDO:', command);
+        console.log('[Monitor] 📝 Comando detectado:', command.command);
+        console.log('[Monitor] 👤 Cliente:', command.clientName || 'Desconocido');
+        
+        if (!command.command) {
+            console.warn('[Monitor] ⚠️ Comando sin acción definida');
+            return;
+        }
         
         switch (command.command) {
             case 'play':
+                console.log('[Monitor] ▶️ Ejecutando: PLAY');
                 this.playMusic();
                 break;
             case 'pause':
+                console.log('[Monitor] ⏸️ Ejecutando: PAUSE');
                 this.pauseMusic();
                 break;
             case 'next':
+                console.log('[Monitor] ⏭️ Ejecutando: NEXT');
                 this.nextTrack();
                 break;
             case 'random':
+                console.log('[Monitor] 🎲 Ejecutando: RANDOM SONG');
                 this.playRandomSong();
                 break;
+            default:
+                console.warn('[Monitor] ❓ Comando no reconocido:', command.command);
         }
     },
     
