@@ -54,6 +54,7 @@ window.MonitorApp = {
         const helpMessage = document.getElementById('spotify-help');
         if (helpMessage) {
             helpMessage.classList.remove('hidden');
+            helpMessage.style.display = 'block';
         }
     },
     
@@ -66,10 +67,11 @@ window.MonitorApp = {
             }
         });
         
-        // Ocultar ayuda de Spotify
+        // Ocultar ayuda de Spotify (mantenerla visible para referencia)
         const helpMessage = document.getElementById('spotify-help');
         if (helpMessage) {
-            helpMessage.classList.add('hidden');
+            // Mantener visible pero con menor prominencia
+            helpMessage.style.opacity = '0.7';
         }
     },
     
@@ -131,8 +133,19 @@ window.MonitorApp = {
                         </div>
                         
                         <!-- Spotify Help -->
-                        <div id="spotify-help" class="help-message hidden">
-                            💡 <strong>Tip:</strong> Si ves "Abre Spotify...", simplemente abre Spotify en cualquier dispositivo y reproduce una canción. Luego vuelve a intentar aquí.
+                        <div id="spotify-help" class="help-section">
+                            <h4>💡 Instrucciones para usar Spotify</h4>
+                            <div class="help-steps">
+                                <p><strong>Para que funcionen los comandos:</strong></p>
+                                <ol>
+                                    <li>Abre la app de Spotify en cualquier dispositivo</li>
+                                    <li>Reproduce cualquier canción (para activar el dispositivo)</li>
+                                    <li>Regresa aquí y usa los controles normalmente</li>
+                                </ol>
+                                <p class="help-tip">
+                                    ⚠️ Si ves errores 404, es porque Spotify necesita un dispositivo activo primero
+                                </p>
+                            </div>
                         </div>
                         
                         <!-- Playlist Section -->
@@ -523,6 +536,7 @@ window.MonitorApp = {
                 break;
             case 'next':
                 console.log('[Monitor] ⏭️ Ejecutando: NEXT');
+                console.log('[Monitor] 📱 Comando "next" recibido desde control móvil');
                 this.nextTrack();
                 break;
             case 'random':
@@ -796,8 +810,11 @@ window.MonitorApp = {
             
             if (response.ok) {
                 this.updateStatus('Pausado', 'info');
+            } else if (response.status === 404) {
+                this.updateStatus('⚠️ Abre Spotify y reproduce cualquier canción primero', 'warning');
             } else {
                 this.updateStatus('Error al pausar', 'error');
+                console.warn('[Monitor] Error en Spotify API (pause):', response.status, response.statusText);
             }
         } catch (error) {
             this.updateStatus('Error conectando con Spotify', 'error');
@@ -827,8 +844,12 @@ window.MonitorApp = {
             
             if (response.ok) {
                 this.updateStatus('Siguiente canción...', 'success');
+            } else if (response.status === 404) {
+                this.updateStatus('⚠️ Abre Spotify y reproduce cualquier canción primero', 'warning');
+                console.log('[Monitor] 💡 Instrucciones: Abre Spotify → Reproduce cualquier canción → Vuelve a intentar');
             } else {
                 this.updateStatus('Error al cambiar canción', 'error');
+                console.warn('[Monitor] Error en Spotify API:', response.status, response.statusText);
             }
         } catch (error) {
             this.updateStatus('Error conectando con Spotify', 'error');

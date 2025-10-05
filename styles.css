@@ -314,6 +314,30 @@ input:focus, select:focus, textarea:focus {
     font-size: 1rem;
 }
 
+/* ===== SPOTIFY HELP SECTION ===== */
+.help-steps {
+    margin: 1rem 0;
+}
+
+.help-steps ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.help-steps li {
+    margin: 0.3rem 0;
+    line-height: 1.4;
+}
+
+.help-steps .help-tip {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
 /* ===== SIMPLE CONTROL ===== */
 .simple-control-section {
     text-align: center;
