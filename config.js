@@ -28,7 +28,7 @@ window.AppConfig = {
         SPOTIFY_AUTH: '/auth/spotify',
         RANDOM_SONG: '/api/random-song',
         GENRES: '/api/profiler/genres',
-        CREATE_PROFILE: '/create-profile'
+        CREATE_PROFILE: '/api/profiler/profiles'
     },
     
     // Configuración de UI

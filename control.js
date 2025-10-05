@@ -307,7 +307,7 @@ window.ControlApp = {
         const songsLimit = document.getElementById('songs-limit').value;
         
         try {
-            const response = await fetch(`${this.baseUrl}/create-profile`, {
+            const response = await fetch(`${this.baseUrl}/api/profiler/profiles`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
