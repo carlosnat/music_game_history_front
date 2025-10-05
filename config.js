@@ -27,8 +27,8 @@ window.AppConfig = {
         HEARTBEAT: '/heartbeat',
         SPOTIFY_AUTH: '/auth/spotify',
         RANDOM_SONG: '/api/random-song',
-        GENRES: '/api/genres',
-        CREATE_PROFILE: '/create-profile'
+        GENRES: '/api/profiler/genres',
+        CREATE_PROFILE: '/api/profiler/create-profile'
     },
     
     // Configuración de UI
