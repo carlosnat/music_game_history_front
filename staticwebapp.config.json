@@ -1,19 +1,21 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["*.{css,js,png,jpg,gif,ico,svg,woff,woff2,ttf,eot}"]
+    "exclude": ["*.{css,js,png,jpg,gif,ico,svg,woff,woff2,ttf,eot}", "/api/*"]
   },
   "routes": [
     {
       "route": "/*.css",
       "headers": {
-        "Content-Type": "text/css"
+        "Content-Type": "text/css",
+        "Cache-Control": "public, max-age=31536000"
       }
     },
     {
       "route": "/*.js",
       "headers": {
-        "Content-Type": "application/javascript"
+        "Content-Type": "application/javascript",
+        "Cache-Control": "public, max-age=31536000"
       }
     },
     {
@@ -23,7 +25,7 @@
     },
     {
       "route": "/monitor",
-      "serve": "/index.html",
+      "serve": "/index.html", 
       "statusCode": 200
     },
     {
@@ -34,7 +36,7 @@
   ],
   "mimeTypes": {
     ".json": "application/json",
-    ".js": "application/javascript",
+    ".js": "application/javascript", 
     ".css": "text/css",
     ".html": "text/html"
   },

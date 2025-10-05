@@ -104,6 +104,15 @@ class Router {
                 if (queryIndex !== -1) {
                     hashPath = hashPath.substring(0, queryIndex);
                 }
+                
+                // Limpiar cualquier prefijo /fronts que pueda haber llegado
+                if (hashPath.startsWith('/fronts/')) {
+                    hashPath = hashPath.substring(7); // Remover '/fronts'
+                    if (!hashPath.startsWith('/')) {
+                        hashPath = '/' + hashPath;
+                    }
+                }
+                
                 return hashPath;
             }
         }
@@ -115,6 +124,19 @@ class Router {
         const queryIndex = pathname.indexOf('?');
         if (queryIndex !== -1) {
             pathname = pathname.substring(0, queryIndex);
+        }
+        
+        // Limpiar cualquier prefijo /fronts que pueda haber llegado
+        if (pathname.startsWith('/fronts/')) {
+            pathname = pathname.substring(7); // Remover '/fronts'
+            if (!pathname.startsWith('/')) {
+                pathname = '/' + pathname;
+            }
+        }
+        
+        // Si pathname está vacío después de limpiar, usar '/'
+        if (!pathname || pathname === '') {
+            pathname = '/';
         }
         
         return pathname;
