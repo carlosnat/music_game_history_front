@@ -47,6 +47,12 @@ window.MonitorApp = {
                 button.disabled = false;
             }
         });
+        
+        // Mostrar ayuda de Spotify
+        const helpMessage = document.getElementById('spotify-help');
+        if (helpMessage) {
+            helpMessage.classList.remove('hidden');
+        }
     },
     
     disableSpotifyControls() {
@@ -57,6 +63,12 @@ window.MonitorApp = {
                 button.disabled = true;
             }
         });
+        
+        // Ocultar ayuda de Spotify
+        const helpMessage = document.getElementById('spotify-help');
+        if (helpMessage) {
+            helpMessage.classList.add('hidden');
+        }
     },
     
     render() {
@@ -114,6 +126,11 @@ window.MonitorApp = {
                         <!-- Status -->
                         <div id="player-status" class="status-message info">
                             Conecta tu cuenta de Spotify para comenzar
+                        </div>
+                        
+                        <!-- Spotify Help -->
+                        <div id="spotify-help" class="help-message hidden">
+                            💡 <strong>Tip:</strong> Si ves "Abre Spotify...", simplemente abre Spotify en cualquier dispositivo y reproduce una canción. Luego vuelve a intentar aquí.
                         </div>
                     </div>
                     
@@ -637,7 +654,7 @@ window.MonitorApp = {
             if (response.ok) {
                 this.updateStatus('Reproduciendo...', 'success');
             } else if (response.status === 404) {
-                this.updateStatus('Abre Spotify para reproducir', 'warning');
+                this.updateStatus('⚠️ Abre Spotify y reproduce cualquier canción primero', 'warning');
             } else {
                 this.updateStatus('Error al reproducir', 'error');
             }
@@ -783,7 +800,8 @@ window.MonitorApp = {
                         this.updateStatus(`🎵 Reproduciendo: ${track.name}`, 'success');
                         this.enableSpotifyControls();
                     } else if (playResponse.status === 404) {
-                        this.updateStatus('Abre Spotify en tu dispositivo para reproducir', 'warning');
+                        this.updateStatus('⚠️ Abre Spotify en tu dispositivo y reproduce cualquier canción primero', 'warning');
+                        console.log('[Monitor] 💡 Instrucciones: Abre Spotify → Reproduce cualquier canción → Vuelve a intentar');
                     } else {
                         this.updateStatus('Error reproduciendo en Spotify', 'error');
                     }

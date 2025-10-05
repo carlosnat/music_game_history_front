@@ -93,9 +93,51 @@ window.ControlApp = {
                     <div id="profile-setup-status" class="status-message"></div>
                 </div>
                 
-                <!-- Control View -->
-                <div id="music-control-view" class="control-card hidden">
+                <!-- Song Info Display View -->
+                <div id="song-info-view" class="control-card hidden">
                     <button class="btn btn-secondary mb-2" onclick="ControlApp.disconnect()">🔌 Desconectar</button>
+                    
+                    <div id="client-info" class="info-card">
+                        <h3>🎵 ¿Qué Canción es Esta?</h3>
+                        <div id="connection-status"></div>
+                    </div>
+                    
+                    <div id="current-song-display" class="song-display-card">
+                        <div id="song-status" class="song-status">
+                            <div class="waiting-message">
+                                <div class="music-icon">🎶</div>
+                                <h3>Esperando música...</h3>
+                                <p>El reproductor está preparando la siguiente canción</p>
+                            </div>
+                        </div>
+                        
+                        <div id="song-info-content" class="song-info-content hidden">
+                            <div class="album-cover">
+                                <img id="song-image" src="" alt="Album Cover" style="display: none;">
+                                <div id="default-cover" class="default-album-cover">🎵</div>
+                            </div>
+                            
+                            <div class="song-details">
+                                <h2 id="song-title">Título de la Canción</h2>
+                                <h3 id="song-artist">Artista</h3>
+                                <p id="song-album">Álbum</p>
+                                <div class="song-meta">
+                                    <span id="song-year" class="meta-item"></span>
+                                    <span id="song-genre" class="meta-item"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="guess-section">
+                                <h4>¿Conoces esta canción?</h4>
+                                <div class="guess-buttons">
+                                    <button class="guess-btn easy" onclick="ControlApp.makeGuess('easy')">😊 Fácil</button>
+                                    <button class="guess-btn medium" onclick="ControlApp.makeGuess('medium')">🤔 Regular</button>
+                                    <button class="guess-btn hard" onclick="ControlApp.makeGuess('hard')">😵 Difícil</button>
+                                    <button class="guess-btn unknown" onclick="ControlApp.makeGuess('unknown')">❓ No la conozco</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div id="client-info" class="info-card">
                         <h4>Dispositivo Conectado</h4>
@@ -106,30 +148,23 @@ window.ControlApp = {
                     <h2>Control de Música</h2>
                     <p>¡Descubre música increíble de forma aleatoria!</p>
                     
-                    <button id="start-music-btn" class="control-button">
-                        🎲 Iniciar Música Aleatoria
-                    </button>
-                    
-                    <div id="current-song-info" class="hidden">
-                        <h4>🎵 Reproduciendo:</h4>
-                        <div id="song-details">
-                            <p class="song-title">-</p>
-                            <p class="song-artist">-</p>
+                    <div id="game-stats" class="stats-section">
+                        <h4>📊 Tu Puntuación</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-number" id="correct-guesses">0</span>
+                                <span class="stat-label">Aciertos</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="total-songs">0</span>
+                                <span class="stat-label">Canciones</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="accuracy">0%</span>
+                                <span class="stat-label">Precisión</span>
+                            </div>
                         </div>
-                        
-                        <div class="control-buttons">
-                            <button id="previous-btn" class="btn">⏮️</button>
-                            <button id="pause-btn" class="btn">⏸️</button>
-                            <button id="play-btn" class="btn">▶️</button>
-                            <button id="next-btn" class="btn">⏭️</button>
-                        </div>
-                        
-                        <button id="another-random-btn" class="btn btn-secondary">
-                            🎲 Otra Canción Aleatoria
-                        </button>
                     </div>
-                    
-                    <div id="control-status" class="status-message"></div>
                 </div>
             </div>
         `;
@@ -147,22 +182,6 @@ window.ControlApp = {
         if (createProfileBtn) {
             createProfileBtn.addEventListener('click', () => this.createProfile());
         }
-        
-        // Music controls
-        const startMusicBtn = document.getElementById('start-music-btn');
-        if (startMusicBtn) {
-            startMusicBtn.addEventListener('click', () => this.sendCommand('random'));
-        }
-        
-        ['previous-btn', 'pause-btn', 'play-btn', 'next-btn', 'another-random-btn'].forEach(btnId => {
-            const btn = document.getElementById(btnId);
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    const command = btnId.replace('-btn', '').replace('another-random', 'random');
-                    this.sendCommand(command);
-                });
-            }
-        });
     },
     
     checkURLParams() {
@@ -188,7 +207,7 @@ window.ControlApp = {
         console.log(`[Control] Mostrando vista: ${viewName}`);
         
         // Ocultar todas las vistas
-        const views = ['scanner-view', 'register-view', 'profile-setup-view', 'music-control-view'];
+        const views = ['scanner-view', 'register-view', 'profile-setup-view', 'song-info-view'];
         views.forEach(viewId => {
             const element = document.getElementById(viewId);
             if (element) element.classList.add('hidden');
@@ -237,7 +256,7 @@ window.ControlApp = {
                 const hasProfile = localStorage.getItem(`profile_${this.clientId}`);
                 if (hasProfile) {
                     this.userProfile = JSON.parse(hasProfile);
-                    this.showView('music-control');
+                    this.showView('song-info');
                     this.updateClientInfo();
                     this.startHeartbeat();
                 } else {
@@ -331,7 +350,7 @@ window.ControlApp = {
                 this.userProfile = data.profile;
                 localStorage.setItem(`profile_${this.clientId}`, JSON.stringify(this.userProfile));
                 
-                this.showView('music-control');
+                this.showView('song-info');
                 this.updateClientInfo();
                 this.startHeartbeat();
                 this.showStatus('profile-setup-status', 'Perfil creado exitosamente', 'success');
@@ -344,19 +363,20 @@ window.ControlApp = {
         }
     },
     
-    async sendCommand(command) {
+    // Función para hacer una respuesta/adivinanza
+    async makeGuess(difficulty) {
         try {
-            // Mostrar feedback inmediato
-            this.showStatus('control-status', `Enviando comando "${command}"...`, 'info');
+            console.log(`[Control] Enviando respuesta: ${difficulty}`);
             
-            const response = await fetch(`${this.baseUrl}/commands`, {
+            const response = await fetch(`${this.baseUrl}/guess`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sessionId: this.sessionId,
                     clientId: this.clientId,
-                    action: command,
                     clientName: this.clientName,
+                    difficulty: difficulty,
+                    songId: this.currentSongInfo?.id,
                     timestamp: Date.now()
                 })
             });
@@ -364,26 +384,117 @@ window.ControlApp = {
             const data = await response.json();
             
             if (data.success) {
-                console.log('[Control] ✅ Comando enviado exitosamente:', command);
-                this.showStatus('control-status', `✅ Comando "${command}" enviado al monitor`, 'success');
-                
-                // Limpiar el estado después de 3 segundos
-                setTimeout(() => {
-                    this.showStatus('control-status', 'Listo para enviar comandos', 'info');
-                }, 3000);
+                this.updateStats(difficulty);
+                this.showGuessResult(difficulty);
             } else {
-                console.error('[Control] ❌ Error en respuesta del servidor:', data);
-                this.showStatus('control-status', 'Error enviando comando', 'error');
+                console.error('[Control] Error al enviar respuesta:', data);
             }
         } catch (error) {
-            console.error('[Control] ❌ Error sending command:', error);
-            this.showStatus('control-status', 'Error de conexión', 'error');
+            console.error('[Control] Error al enviar respuesta:', error);
         }
+    },
+    
+    // Actualizar estadísticas locales
+    updateStats(difficulty) {
+        let stats = JSON.parse(localStorage.getItem(`game_stats_${this.clientId}`) || '{"correct": 0, "total": 0}');
+        
+        stats.total++;
+        if (difficulty !== 'unknown') {
+            stats.correct++;
+        }
+        
+        localStorage.setItem(`game_stats_${this.clientId}`, JSON.stringify(stats));
+        this.renderStats(stats);
+    },
+    
+    // Mostrar estadísticas en la UI
+    renderStats(stats) {
+        document.getElementById('correct-guesses').textContent = stats.correct;
+        document.getElementById('total-songs').textContent = stats.total;
+        document.getElementById('accuracy').textContent = stats.total > 0 ? 
+            Math.round((stats.correct / stats.total) * 100) + '%' : '0%';
+    },
+    
+    // Mostrar resultado de la adivinanza
+    showGuessResult(difficulty) {
+        const messages = {
+            'easy': '😊 ¡Fácil! +3 puntos',
+            'medium': '🤔 ¡Bien! +2 puntos', 
+            'hard': '😵 ¡Impresionante! +5 puntos',
+            'unknown': '❓ No pasa nada, ¡a seguir aprendiendo!'
+        };
+        
+        // Mostrar mensaje temporal
+        const guessSection = document.querySelector('.guess-section');
+        if (guessSection) {
+            const originalHTML = guessSection.innerHTML;
+            guessSection.innerHTML = `<div class="guess-result">${messages[difficulty]}</div>`;
+            
+            setTimeout(() => {
+                guessSection.innerHTML = originalHTML;
+            }, 2000);
+        }
+    },
+    
+    // Polling para recibir información de canciones desde el monitor
+    async pollForSongInfo() {
+        if (!this.sessionId || !this.clientId) return;
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/current-song/${this.sessionId}`);
+            const data = await response.json();
+            
+            if (data.success && data.song) {
+                this.displaySongInfo(data.song);
+            } else {
+                this.showWaitingState();
+            }
+        } catch (error) {
+            console.error('[Control] Error obteniendo info de canción:', error);
+        }
+    },
+    
+    // Mostrar información de la canción actual
+    displaySongInfo(songInfo) {
+        this.currentSongInfo = songInfo;
+        
+        // Mostrar contenido de la canción
+        document.getElementById('song-info-content').classList.remove('hidden');
+        document.querySelector('.waiting-message').style.display = 'none';
+        
+        // Llenar información
+        document.getElementById('song-title').textContent = songInfo.title || 'Título desconocido';
+        document.getElementById('song-artist').textContent = songInfo.artist || 'Artista desconocido';
+        document.getElementById('song-album').textContent = songInfo.album || 'Álbum desconocido';
+        document.getElementById('song-year').textContent = songInfo.year || '';
+        document.getElementById('song-genre').textContent = songInfo.genre || '';
+        
+        // Manejar imagen del álbum
+        const songImage = document.getElementById('song-image');
+        const defaultCover = document.getElementById('default-cover');
+        
+        if (songInfo.image) {
+            songImage.src = songInfo.image;
+            songImage.style.display = 'block';
+            defaultCover.style.display = 'none';
+        } else {
+            songImage.style.display = 'none';
+            defaultCover.style.display = 'flex';
+        }
+    },
+    
+    // Mostrar estado de espera
+    showWaitingState() {
+        document.getElementById('song-info-content').classList.add('hidden');
+        document.querySelector('.waiting-message').style.display = 'block';
     },
     
     startHeartbeat() {
         this.heartbeatInterval = setInterval(async () => {
             try {
+                // Además del heartbeat, también hacer polling de canciones
+                this.pollForSongInfo();
+                
                 await fetch(`${this.baseUrl}/heartbeat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -395,7 +506,11 @@ window.ControlApp = {
             } catch (error) {
                 console.error('[Control] Heartbeat failed:', error);
             }
-        }, 10000);
+        }, 3000); // Más frecuente para actualizar canciones
+        
+        // Cargar estadísticas iniciales
+        const stats = JSON.parse(localStorage.getItem(`game_stats_${this.clientId}`) || '{"correct": 0, "total": 0}');
+        this.renderStats(stats);
     },
     
     updateClientInfo() {
@@ -405,7 +520,8 @@ window.ControlApp = {
         }
     },
     
-    disconnect() {        if (this.heartbeatInterval) {
+    disconnect() {
+        if (this.heartbeatInterval) {
             clearInterval(this.heartbeatInterval);
         }
         
