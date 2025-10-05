@@ -342,8 +342,9 @@ window.ControlApp = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    command: command,
+                    sessionId: this.sessionId,
                     clientId: this.clientId,
+                    action: command,
                     clientName: this.clientName,
                     timestamp: Date.now()
                 })
