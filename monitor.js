@@ -380,8 +380,13 @@ window.MonitorApp = {
         }, window.AppConfig?.POLLING?.CONNECTIVITY || 30000);
         
         // Polling de comandos
-        this.pollingInterval = setInterval(() => {
-            this.checkForCommands();
+        this.pollingInterval = setInterval(async () => {
+            await this.checkForCommands();
+            
+            // Auto-cargar playlist si no hay una y hay clientes
+            if (!this.currentPlaylist && this.sessionId) {
+                await this.autoLoadPlaylist();
+            }
         }, window.AppConfig?.POLLING?.COMMANDS || 5000);
         
         // Polling de clientes
@@ -436,23 +441,23 @@ window.MonitorApp = {
             // Comando individual con estructura {command: "action", ...}
             if (data && data.command) {
                 console.log('[Monitor] 🎯 Processing single command:', data.command);
-                this.handleCommand(data);
+                await this.handleCommand(data);
                 this.updateCommandDisplay(data);
             } 
             // Array de comandos
             else if (data && Array.isArray(data.commands)) {
                 console.log('[Monitor] 📋 Processing multiple commands:', data.commands.length);
-                data.commands.forEach(command => {
-                    this.handleCommand(command);
+                for (const command of data.commands) {
+                    await this.handleCommand(command);
                     this.updateCommandDisplay(command);
-                });
+                }
             }
             // Comando con estructura {action: "command", ...}
             else if (data && data.action) {
                 console.log('[Monitor] 🎯 Processing action command:', data.action);
                 // Convertir formato action a command para compatibilidad
                 const commandData = { ...data, command: data.action };
-                this.handleCommand(commandData);
+                await this.handleCommand(commandData);
                 this.updateCommandDisplay(commandData);
             }
             // Respuesta de éxito sin comando específico
@@ -515,7 +520,7 @@ window.MonitorApp = {
         }
     },
     
-    handleCommand(command) {
+    async handleCommand(command) {
         console.log('[Monitor] 🎯 MANEJANDO COMANDO:', command);
         console.log('[Monitor] 📝 Comando detectado:', command.command);
         console.log('[Monitor] 👤 Cliente:', command.clientName || 'Desconocido');
@@ -537,7 +542,8 @@ window.MonitorApp = {
             case 'next':
                 console.log('[Monitor] ⏭️ Ejecutando: NEXT');
                 console.log('[Monitor] 📱 Comando "next" recibido desde control móvil');
-                this.nextTrack();
+                console.log('[Monitor] 🎵 Llamando nextTrack()...');
+                await this.nextTrack();
                 break;
             case 'random':
                 console.log('[Monitor] 🎲 Ejecutando: RANDOM SONG');
@@ -579,6 +585,49 @@ window.MonitorApp = {
         console.log('[Auth] Redirigiendo a Spotify para autenticación...');
         console.log('[Auth] REDIRECT_URI:', REDIRECT_URI);
         window.location.href = url;
+    },
+    
+    // Auto-cargar playlist cuando hay clientes conectados
+    async autoLoadPlaylist() {
+        try {
+            // Solo intentar si aún no tenemos playlist cargada
+            if (this.currentPlaylist) return;
+            
+            console.log('[Monitor] 🔍 Buscando clientes con perfiles...');
+            
+            // Verificar si hay perfiles disponibles
+            const profilesResponse = await fetch(`${this.serverBaseURL}/api/profiler/profiles`);
+            if (!profilesResponse.ok) return;
+            
+            const profilesData = await profilesResponse.json();
+            if (!profilesData.success || !profilesData.profiles || profilesData.profiles.length === 0) {
+                return;
+            }
+            
+            // Usar el primer perfil disponible
+            const profile = profilesData.profiles[0];
+            console.log('[Monitor] 🎵 Perfil encontrado, cargando canciones...');
+            
+            const songsResponse = await fetch(`${this.serverBaseURL}/api/profiler/profiles/${profile.id}/songs`);
+            if (!songsResponse.ok) return;
+            
+            const songsData = await songsResponse.json();
+            if (songsData.success && songsData.songs && songsData.songs.length > 0) {
+                this.currentPlaylist = songsData.songs;
+                this.currentSongIndex = 0;
+                this.displayPlaylist(songsData.songs);
+                this.updateStatus(`🎵 Lista auto-cargada: ${songsData.songs.length} canciones`, 'success');
+                
+                // Mostrar la sección de playlist
+                document.getElementById('playlist-section').classList.remove('hidden');
+                
+                console.log('[Monitor] ✅ Playlist cargada automáticamente');
+            }
+            
+        } catch (error) {
+            // Error silencioso para no spam en consola
+            console.debug('[Monitor] Auto-load playlist failed (normal durante startup)');
+        }
     },
     
     // Cargar lista de canciones de un cliente
@@ -823,11 +872,21 @@ window.MonitorApp = {
     
     async nextTrack() {
         try {
+            console.log('[Monitor] 🎵 nextTrack() llamado');
+            
             // Si tenemos una playlist cargada, usar la siguiente canción de la lista
             if (this.currentPlaylist && this.currentPlaylist.length > 0) {
+                console.log(`[Monitor] 📋 Usando playlist cargada (${this.currentPlaylist.length} canciones)`);
+                console.log(`[Monitor] 🔢 Canción actual: ${this.currentSongIndex}, cambiando a: ${(this.currentSongIndex + 1) % this.currentPlaylist.length}`);
+                
                 this.currentSongIndex = (this.currentSongIndex + 1) % this.currentPlaylist.length;
+                const nextSong = this.currentPlaylist[this.currentSongIndex];
+                
+                console.log(`[Monitor] ▶️ Reproduciendo: "${nextSong.title}" por ${nextSong.artist}`);
                 await this.playSongAtIndex(this.currentSongIndex);
                 return;
+            } else {
+                console.log('[Monitor] ❌ No hay playlist cargada, usando comando Spotify directo');
             }
             
             // Fallback: usar comando de Spotify normal
