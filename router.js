@@ -68,10 +68,13 @@ class Router {
         let path = this.getCurrentPath();
         const route = this.routes.get(path);
         
+        // Siempre ocultar todas las vistas primero
+        this.hideAllViews();
+        this.hideLoading();
+        
         if (route) {
             this.currentRoute = path;
             document.title = route.title;
-            this.hideAllViews();
             this.updateNavigation();
             
             // Mostrar loading
@@ -94,14 +97,27 @@ class Router {
         // Priorizar hash routing si existe
         if (window.location.hash) {
             // Extraer la ruta del hash (ej: #/control -> /control)
-            const hashPath = window.location.hash.substring(1);
+            let hashPath = window.location.hash.substring(1);
             if (hashPath && hashPath.startsWith('/')) {
+                // Remover query parameters del hash si existen
+                const queryIndex = hashPath.indexOf('?');
+                if (queryIndex !== -1) {
+                    hashPath = hashPath.substring(0, queryIndex);
+                }
                 return hashPath;
             }
         }
         
         // Usar pathname como fallback
-        return window.location.pathname;
+        let pathname = window.location.pathname;
+        
+        // Remover query parameters del pathname si existen
+        const queryIndex = pathname.indexOf('?');
+        if (queryIndex !== -1) {
+            pathname = pathname.substring(0, queryIndex);
+        }
+        
+        return pathname;
     }
     
     hideAllViews() {
@@ -162,11 +178,15 @@ class Router {
     }
     
     show404() {
-        console.log('[Router] Página no encontrada');
+        console.log('[Router] Página no encontrada - Ruta:', this.getCurrentPath());
         this.hideAllViews();
         this.hideLoading();
         this.showView('not-found-view');
         document.title = 'Music Game - 404';
+        
+        // Limpiar navegación activa
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => link.classList.remove('active'));
     }
 }
 
