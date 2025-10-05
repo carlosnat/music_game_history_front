@@ -1,0 +1,43 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif,ico,svg}", "/css/*", "/js/*", "*.{css,js,png,jpg,gif,ico,svg}"]
+  },
+  "routes": [
+    {
+      "route": "/",
+      "serve": "/index.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/monitor",
+      "serve": "/index.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/control",
+      "serve": "/index.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/fronts/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    }
+  ],
+  "mimeTypes": {
+    ".json": "application/json",
+    ".js": "application/javascript",
+    ".css": "text/css",
+    ".html": "text/html"
+  },
+  "globalHeaders": {
+    "cache-control": "max-age=31536000"
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
+  }
+}

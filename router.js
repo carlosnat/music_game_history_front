@@ -8,8 +8,9 @@ class Router {
         // Configurar rutas
         this.setupRoutes();
         
-        // Escuchar cambios de URL
+        // Escuchar cambios de URL (tanto pathname como hash)
         window.addEventListener('popstate', () => this.handleRoute());
+        window.addEventListener('hashchange', () => this.handleRoute());
         
         // Interceptar clicks en links
         this.setupLinkInterception();
@@ -51,13 +52,20 @@ class Router {
     
     navigateTo(path) {
         if (this.currentRoute !== path) {
-            history.pushState(null, '', path);
+            // Si estamos usando hash routing, actualizar el hash
+            if (window.location.hash) {
+                window.location.hash = path;
+            } else {
+                // Usar history API para pathname routing
+                history.pushState(null, '', path);
+            }
             this.handleRoute();
         }
     }
     
     handleRoute() {
-        const path = window.location.pathname;
+        // Obtener la ruta actual (puede ser pathname o hash)
+        let path = this.getCurrentPath();
         const route = this.routes.get(path);
         
         if (route) {
@@ -80,6 +88,20 @@ class Router {
             // Ruta no encontrada
             this.show404();
         }
+    }
+    
+    getCurrentPath() {
+        // Priorizar hash routing si existe
+        if (window.location.hash) {
+            // Extraer la ruta del hash (ej: #/control -> /control)
+            const hashPath = window.location.hash.substring(1);
+            if (hashPath && hashPath.startsWith('/')) {
+                return hashPath;
+            }
+        }
+        
+        // Usar pathname como fallback
+        return window.location.pathname;
     }
     
     hideAllViews() {
