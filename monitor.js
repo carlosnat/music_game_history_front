@@ -178,10 +178,8 @@ window.MonitorApp = {
         try {
             // Intentar varios endpoints para obtener conteo de canciones
             const endpoints = [
-                '/api/songs/count',
-                '/songs/stats', // Estadísticas de canciones
-                '/api/songs/stats', // Estadísticas alternativas
-                '/songs/count',
+                '/api/profiler', // Info del módulo profiler
+                '/api/profiler/songs', // Endpoint correcto para canciones
                 '/api/profiler/genres' // Endpoint correcto para géneros
             ];
             
@@ -332,16 +330,17 @@ window.MonitorApp = {
     
     async checkEndpointAvailability() {
         try {
-            // Verificar endpoint /clients
-            const clientsResponse = await fetch(`${this.serverBaseURL}/clients`);
-            if (!clientsResponse.ok) {
-                console.warn('[Monitor] /clients endpoint not available, disabling client polling');
-                if (this.clientsPollingInterval) {
-                    clearInterval(this.clientsPollingInterval);
-                    this.clientsPollingInterval = null;
-                }
-                this.handleClientsError(clientsResponse.status);
+            console.log('[Monitor] ⚠️ Endpoint /clients no está disponible en el servidor actual');
+            console.log('[Monitor] Deshabilitando polling de clientes por compatibilidad');
+            
+            // Deshabilitar polling de clientes ya que el endpoint no existe
+            if (this.clientsPollingInterval) {
+                clearInterval(this.clientsPollingInterval);
+                this.clientsPollingInterval = null;
             }
+            
+            // Mostrar mensaje informativo en lugar de error
+            this.showClientsUnavailable();
         } catch (error) {
             console.warn('[Monitor] Server connectivity check failed:', error.message);
         }
@@ -351,62 +350,67 @@ window.MonitorApp = {
         try {
             const response = await fetch(`${this.serverBaseURL}/commands`);
             
-            if (!response.ok) {
-                // Silencioso para commands ya que puede ser normal no tener comandos
+            console.log('[Monitor] Checking for commands - Status:', response.status);
+            
+            if (response.status === 304) {
+                console.debug('[Monitor] No new commands (304 Not Modified)');
                 return;
             }
             
-            const command = await response.json();
+            if (!response.ok) {
+                console.warn('[Monitor] Commands endpoint returned:', response.status);
+                return;
+            }
             
-            if (command && command.command) {
-                this.handleCommand(command);
-                this.updateCommandDisplay(command);
+            const data = await response.json();
+            console.log('[Monitor] Commands response:', data);
+            
+            // Manejar diferentes formatos de respuesta
+            if (data && data.command) {
+                console.log('[Monitor] Processing single command:', data.command);
+                this.handleCommand(data);
+                this.updateCommandDisplay(data);
+            } else if (data && Array.isArray(data.commands)) {
+                console.log('[Monitor] Processing multiple commands:', data.commands.length);
+                data.commands.forEach(command => {
+                    this.handleCommand(command);
+                    this.updateCommandDisplay(command);
+                });
+            } else if (data && data.success && data.message) {
+                console.log('[Monitor] Server response:', data.message);
+            } else {
+                console.debug('[Monitor] No commands to process');
             }
         } catch (error) {
-            // Logging más silencioso para commands
-            console.debug('[Monitor] Commands endpoint not available:', error.message);
+            console.debug('[Monitor] Commands check failed:', error.message);
         }
     },
     
     async updateClientsList() {
         try {
-            const response = await fetch(`${this.serverBaseURL}/clients`);
-            
-            // Verificar si la respuesta es exitosa
-            if (!response.ok) {
-                console.warn(`[Monitor] Server returned ${response.status} for /clients`);
-                this.handleClientsError(response.status);
-                return;
-            }
-            
-            const data = await response.json();
-            
-            // Validar que data sea un array
-            const clients = Array.isArray(data) ? data : (data.clients && Array.isArray(data.clients) ? data.clients : []);
-            
-            const clientsList = document.getElementById('clients-list');
-            const connectedCount = document.getElementById('connected-clients');
-            
-            if (!clientsList || !connectedCount) {
-                console.warn('[Monitor] Client list elements not found');
-                return;
-            }
-            
-            if (clients.length === 0) {
-                clientsList.innerHTML = '<p class="text-muted">No hay clientes conectados</p>';
-                connectedCount.textContent = '0';
-            } else {
-                clientsList.innerHTML = clients.map(client => `
-                    <div class="client-item">
-                        <strong>${client.name || 'Cliente sin nombre'}</strong>
-                        <small>${(client.id || 'unknown').toString().slice(-8)}</small>
-                    </div>
-                `).join('');
-                connectedCount.textContent = clients.length;
-            }
+            console.debug('[Monitor] Lista de clientes no disponible - endpoint /clients no existe');
+            this.showClientsUnavailable();
         } catch (error) {
-            console.error('[Monitor] Error updating clients:', error);
-            this.handleClientsError('network');
+            console.debug('[Monitor] Clients update disabled:', error.message);
+            this.showClientsUnavailable();
+        }
+    },
+    
+    showClientsUnavailable() {
+        const clientsList = document.getElementById('clients-list');
+        const connectedCount = document.getElementById('connected-clients');
+        
+        if (clientsList) {
+            clientsList.innerHTML = `
+                <div class="clients-unavailable">
+                    <p class="text-muted">📱 Función de clientes no disponible</p>
+                    <small>El servidor actual no soporta listado de clientes</small>
+                </div>
+            `;
+        }
+        
+        if (connectedCount) {
+            connectedCount.textContent = '0';
         }
     },
     
@@ -485,28 +489,66 @@ window.MonitorApp = {
         this.updateStatus('Buscando canción aleatoria...', 'info');
         
         try {
-            // Usar el endpoint correcto del servidor
-            const response = await fetch(`${this.serverBaseURL}/songs/random/1`);
+            console.log('[Monitor] 🎲 Iniciando búsqueda de canción aleatoria...');
+            
+            // Intentar obtener canción desde los perfiles creados o géneros
+            const response = await fetch(`${this.serverBaseURL}/api/profiler/songs?limit=1&random=true`);
             
             if (response.ok) {
                 const data = await response.json();
+                console.log('[Monitor] 📦 Respuesta del profiler:', data);
                 
-                // El servidor devuelve un array con las canciones
-                if (Array.isArray(data) && data.length > 0) {
-                    const randomSong = data[0]; // Tomar la primera canción
+                // Manejar diferentes formatos de respuesta
+                let randomSong = null;
+                
+                if (data.success && data.songs && Array.isArray(data.songs) && data.songs.length > 0) {
+                    randomSong = data.songs[0];
+                } else if (Array.isArray(data) && data.length > 0) {
+                    randomSong = data[0];
+                } else {
+                    console.warn('[Monitor] ⚠️ No hay canciones en la respuesta del profiler');
+                }
+                
+                if (randomSong) {
+                    console.log('[Monitor] 🎵 Canción seleccionada:', randomSong.name, '-', randomSong.artist);
                     this.updateCurrentSong(randomSong);
                     this.updateStatus('Reproduciendo canción aleatoria', 'success');
                     return;
                 } else {
-                    this.updateStatus('No se encontraron canciones disponibles', 'warning');
+                    console.warn('[Monitor] ⚠️ Respuesta vacía del profiler, intentando endpoint alternativo...');
+                    return await this.tryAlternativeRandomSong();
                 }
             } else {
-                this.updateStatus('Error del servidor al obtener canción aleatoria', 'error');
+                console.warn('[Monitor] ❌ Error del profiler:', response.status);
+                return await this.tryAlternativeRandomSong();
             }
             
         } catch (error) {
-            console.error('[Monitor] Error playing random song:', error);
-            this.updateStatus('Error obteniendo canción aleatoria', 'error');
+            console.error('[Monitor] ❌ Error playing random song:', error);
+            return await this.tryAlternativeRandomSong();
+        }
+    },
+    
+    async tryAlternativeRandomSong() {
+        try {
+            console.log('[Monitor] 🔄 Intentando método alternativo para canción aleatoria...');
+            
+            // Mostrar canción de ejemplo si no hay endpoints disponibles
+            const exampleSong = {
+                name: "Ejemplo - Canción no disponible",
+                artist: "Sistema",
+                genre: "Demo",
+                year: 2025,
+                spotify_uri: null
+            };
+            
+            console.log('[Monitor] 📝 Mostrando canción de ejemplo');
+            this.updateCurrentSong(exampleSong);
+            this.updateStatus('Canción de ejemplo - Configura perfiles para más opciones', 'warning');
+            
+        } catch (error) {
+            console.error('[Monitor] ❌ Error en método alternativo:', error);
+            this.updateStatus('Error: No se puede obtener canción aleatoria', 'error');
         }
     },
     
