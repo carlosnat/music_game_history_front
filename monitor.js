@@ -238,9 +238,21 @@ window.MonitorApp = {
             
             // Manejar la respuesta real del servidor
             if (data.mobileURL) {
-                this.displayQRFromURL(data.mobileURL);
+                // Corregir URL si viene con formato incorrecto
+                let correctedURL = data.mobileURL;
+                
+                // Si la URL tiene el formato /fronts/#/control, corregirla
+                if (correctedURL.includes('/fronts/#/control')) {
+                    const urlObj = new URL(correctedURL);
+                    const hash = urlObj.hash.substring(1); // Remover el #
+                    const searchParams = urlObj.search; // Preservar query parameters
+                    correctedURL = `${urlObj.origin}${hash}${searchParams}`;
+                    console.log('[Monitor] URL corregida:', correctedURL);
+                }
+                
+                this.displayQRFromURL(correctedURL);
                 document.getElementById('current-session').textContent = this.sessionId.slice(-8);
-                console.log('[Monitor] QR URL generated:', data.mobileURL);
+                console.log('[Monitor] QR URL final:', correctedURL);
             } else {
                 throw new Error('No mobile URL returned from server');
             }
@@ -269,14 +281,17 @@ window.MonitorApp = {
     
     displayQRError() {
         const container = document.getElementById('qr-container');
+        const fallbackURL = `/control?session=${this.sessionId}`;
+        
         container.innerHTML = `
             <div class="qr-error">
                 <p>⚠️ No se pudo generar el código QR</p>
                 <p>Acceso directo al control:</p>
-                <a href="/control?session=${this.sessionId}" target="_blank" class="btn btn-secondary">
+                <a href="${fallbackURL}" target="_blank" class="btn btn-secondary">
                     📱 Abrir Control Móvil
                 </a>
                 <small class="text-muted">ID de sesión: ${this.sessionId.slice(-8)}</small>
+                <small class="text-muted d-block">${window.location.origin}${fallbackURL}</small>
             </div>
         `;
         

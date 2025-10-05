@@ -251,17 +251,26 @@ window.ControlApp = {
     async loadGenres() {
         try {
             const response = await fetch(`${this.baseUrl}/api/profiler/genres`);
-            const genres = await response.json();
+            const data = await response.json();
             
-            this.availableGenres = genres;
+            // Extraer el array de géneros del objeto respuesta
+            this.availableGenres = data.genres || [];
+            console.log('[Control] Géneros cargados:', this.availableGenres.length);
             this.renderGenres();
         } catch (error) {
             console.error('[Control] Error loading genres:', error);
+            this.availableGenres = [];
         }
     },
     
     renderGenres() {
         const container = document.getElementById('genres-list');
+        
+        if (!this.availableGenres || !Array.isArray(this.availableGenres) || this.availableGenres.length === 0) {
+            container.innerHTML = '<p class="text-muted">No hay géneros disponibles</p>';
+            return;
+        }
+        
         container.innerHTML = this.availableGenres.map(genre => `
             <button class="selection-item" data-genre="${genre}" onclick="ControlApp.toggleGenre('${genre}')">
                 ${genre}
