@@ -6,6 +6,8 @@ window.MonitorApp = {
     clientsPollingInterval: null,
     connectivityInterval: null,
     currentSongInfo: null,
+    currentPlaylist: null,
+    currentSongIndex: 0,
     
     init() {
         console.log('[Monitor] Inicializando monitor...');
@@ -40,7 +42,7 @@ window.MonitorApp = {
     },
     
     enableSpotifyControls() {
-        const buttons = ['play-random-btn', 'play-btn', 'pause-btn', 'next-btn'];
+        const buttons = ['load-playlist-btn', 'play-btn', 'pause-btn', 'next-btn'];
         buttons.forEach(buttonId => {
             const button = document.getElementById(buttonId);
             if (button) {
@@ -56,7 +58,7 @@ window.MonitorApp = {
     },
     
     disableSpotifyControls() {
-        const buttons = ['play-random-btn', 'play-btn', 'pause-btn', 'next-btn'];
+        const buttons = ['load-playlist-btn', 'play-btn', 'pause-btn', 'next-btn'];
         buttons.forEach(buttonId => {
             const button = document.getElementById(buttonId);
             if (button) {
@@ -117,7 +119,7 @@ window.MonitorApp = {
                         <!-- Controls -->
                         <div class="player-controls">
                             <button id="auth-btn" class="btn btn-secondary">🔐 Conectar Spotify</button>
-                            <button id="play-random-btn" class="btn" disabled>🎲 Canción Aleatoria</button>
+                            <button id="load-playlist-btn" class="btn" disabled>📋 Cargar Lista de Cliente</button>
                             <button id="play-btn" class="btn" disabled>▶️ Reproducir</button>
                             <button id="pause-btn" class="btn" disabled>⏸️ Pausar</button>
                             <button id="next-btn" class="btn" disabled>⏭️ Siguiente</button>
@@ -131,6 +133,14 @@ window.MonitorApp = {
                         <!-- Spotify Help -->
                         <div id="spotify-help" class="help-message hidden">
                             💡 <strong>Tip:</strong> Si ves "Abre Spotify...", simplemente abre Spotify en cualquier dispositivo y reproduce una canción. Luego vuelve a intentar aquí.
+                        </div>
+                        
+                        <!-- Playlist Section -->
+                        <div id="playlist-section" class="playlist-section hidden">
+                            <h3>🎶 Lista de Canciones</h3>
+                            <div id="playlist-container" class="playlist-container">
+                                <p class="text-muted">Carga la lista de un cliente para ver las canciones</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -173,8 +183,8 @@ window.MonitorApp = {
         });
         
         // Controles del reproductor
-        document.getElementById('play-random-btn').addEventListener('click', () => {
-            this.playRandomSong();
+        document.getElementById('load-playlist-btn').addEventListener('click', () => {
+            this.loadClientPlaylist();
         });
         
         document.getElementById('play-btn').addEventListener('click', () => {
@@ -557,6 +567,114 @@ window.MonitorApp = {
         window.location.href = url;
     },
     
+    // Cargar lista de canciones de un cliente
+    async loadClientPlaylist() {
+        try {
+            this.updateStatus('Cargando lista de canciones...', 'info');
+            
+            // Obtener el cliente conectado más reciente (o mostrar selector)
+            const clientsData = await fetch(`${this.serverBaseURL}/clients?sessionId=${this.sessionId}`);
+            const clients = await clientsData.json();
+            
+            if (clients.length === 0) {
+                this.updateStatus('No hay clientes conectados', 'warning');
+                return;
+            }
+            
+            // Usar el primer cliente con perfil
+            const clientWithProfile = clients.find(client => client.profileId);
+            
+            if (!clientWithProfile) {
+                this.updateStatus('Ningún cliente tiene un perfil configurado', 'warning');
+                return;
+            }
+            
+            // Cargar canciones del perfil
+            const playlistResponse = await fetch(`${this.serverBaseURL}/api/profiler/profiles/${clientWithProfile.profileId}/songs`);
+            const playlistData = await playlistResponse.json();
+            
+            if (playlistData.success && playlistData.songs) {
+                this.currentPlaylist = playlistData.songs;
+                this.currentSongIndex = 0;
+                this.displayPlaylist(playlistData.songs);
+                this.updateStatus(`Lista cargada: ${playlistData.songs.length} canciones`, 'success');
+                
+                // Mostrar la sección de playlist
+                document.getElementById('playlist-section').classList.remove('hidden');
+            } else {
+                this.updateStatus('Error cargando lista de canciones', 'error');
+            }
+            
+        } catch (error) {
+            console.error('[Monitor] Error cargando playlist:', error);
+            this.updateStatus('Error de conexión al cargar lista', 'error');
+        }
+    },
+    
+    // Mostrar la lista de canciones en el UI
+    displayPlaylist(songs) {
+        const container = document.getElementById('playlist-container');
+        
+        if (songs.length === 0) {
+            container.innerHTML = '<p class="text-muted">No hay canciones en la lista</p>';
+            return;
+        }
+        
+        const playlistHTML = `
+            <div class="playlist-header">
+                <span><strong>${songs.length} canciones</strong></span>
+                <button class="btn btn-sm" onclick="MonitorApp.shufflePlaylist()">🔀 Mezclar</button>
+            </div>
+            <div class="playlist-items">
+                ${songs.map((song, index) => `
+                    <div class="playlist-item ${index === this.currentSongIndex ? 'current' : ''}" 
+                         onclick="MonitorApp.playSongAtIndex(${index})">
+                        <div class="song-number">${index + 1}</div>
+                        <div class="song-info">
+                            <div class="song-title">${song.title}</div>
+                            <div class="song-artist">${song.artist}</div>
+                        </div>
+                        <div class="song-genre">${song.genre || ''}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        container.innerHTML = playlistHTML;
+    },
+    
+    // Reproducir canción en índice específico
+    async playSongAtIndex(index) {
+        if (!this.currentPlaylist || index >= this.currentPlaylist.length) {
+            return;
+        }
+        
+        this.currentSongIndex = index;
+        const song = this.currentPlaylist[index];
+        
+        // Actualizar UI
+        this.updateCurrentSong(song);
+        this.displayPlaylist(this.currentPlaylist); // Refresh para mostrar current
+        
+        // Reproducir en Spotify
+        await this.searchAndPlayOnSpotify(song);
+    },
+    
+    // Mezclar playlist
+    shufflePlaylist() {
+        if (!this.currentPlaylist) return;
+        
+        // Fisher-Yates shuffle
+        for (let i = this.currentPlaylist.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.currentPlaylist[i], this.currentPlaylist[j]] = [this.currentPlaylist[j], this.currentPlaylist[i]];
+        }
+        
+        this.currentSongIndex = 0;
+        this.displayPlaylist(this.currentPlaylist);
+        this.updateStatus('Lista mezclada', 'success');
+    },
+    
     async playRandomSong() {
         this.updateStatus('Buscando canción aleatoria...', 'info');
         
@@ -688,6 +806,14 @@ window.MonitorApp = {
     
     async nextTrack() {
         try {
+            // Si tenemos una playlist cargada, usar la siguiente canción de la lista
+            if (this.currentPlaylist && this.currentPlaylist.length > 0) {
+                this.currentSongIndex = (this.currentSongIndex + 1) % this.currentPlaylist.length;
+                await this.playSongAtIndex(this.currentSongIndex);
+                return;
+            }
+            
+            // Fallback: usar comando de Spotify normal
             const token = window.localStorage.getItem('spotify_token');
             if (!token) {
                 this.updateStatus('Conecta Spotify para siguiente canción', 'warning');
@@ -799,6 +925,19 @@ window.MonitorApp = {
                     if (playResponse.ok) {
                         this.updateStatus(`🎵 Reproduciendo: ${track.name}`, 'success');
                         this.enableSpotifyControls();
+                        
+                        // Notificar al backend sobre la canción actual
+                        await this.notifyCurrentSong({
+                            id: track.id,
+                            title: track.name,
+                            artist: track.artists[0].name,
+                            album: track.album.name,
+                            image: track.album.images?.[0]?.url,
+                            year: song.year || new Date(track.album.release_date).getFullYear(),
+                            genre: song.genre || 'Unknown',
+                            spotifyUri: track.uri,
+                            spotifyId: track.id
+                        });
                     } else if (playResponse.status === 404) {
                         this.updateStatus('⚠️ Abre Spotify en tu dispositivo y reproduce cualquier canción primero', 'warning');
                         console.log('[Monitor] 💡 Instrucciones: Abre Spotify → Reproduce cualquier canción → Vuelve a intentar');
@@ -819,6 +958,28 @@ window.MonitorApp = {
         } catch (error) {
             console.error('[Monitor] Error in searchAndPlayOnSpotify:', error);
             this.updateStatus('Error conectando con Spotify', 'error');
+        }
+    },
+    
+    // Notificar al backend sobre la canción actual
+    async notifyCurrentSong(songData) {
+        try {
+            const response = await fetch(`${this.serverBaseURL}/current-song`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId: this.sessionId,
+                    songData: songData
+                })
+            });
+            
+            if (response.ok) {
+                console.log('[Monitor] ✅ Canción actual notificada al backend');
+            } else {
+                console.warn('[Monitor] ⚠️ Error notificando canción al backend');
+            }
+        } catch (error) {
+            console.error('[Monitor] Error notificando canción:', error);
         }
     },
     

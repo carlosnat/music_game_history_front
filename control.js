@@ -93,60 +93,31 @@ window.ControlApp = {
                     <div id="profile-setup-status" class="status-message"></div>
                 </div>
                 
-                <!-- Song Info Display View -->
-                <div id="song-info-view" class="control-card hidden">
+                <!-- Simple Control View -->
+                <div id="simple-control-view" class="control-card hidden">
                     <button class="btn btn-secondary mb-2" onclick="ControlApp.disconnect()">🔌 Desconectar</button>
                     
                     <div id="client-info" class="info-card">
-                        <h3>🎵 ¿Qué Canción es Esta?</h3>
-                        <div id="connection-status"></div>
+                        <h3>🎵 Control de Música</h3>
+                        <div id="connection-status">
+                            <p id="client-info-text">Conectando...</p>
+                        </div>
                     </div>
                     
-                    <div id="current-song-display" class="song-display-card">
-                        <div id="song-status" class="song-status">
-                            <div class="waiting-message">
-                                <div class="music-icon">🎶</div>
-                                <h3>Esperando música...</h3>
-                                <p>El reproductor está preparando la siguiente canción</p>
-                            </div>
-                        </div>
+                    <div class="simple-control-section">
+                        <div class="control-icon">🎶</div>
+                        <h2>Control Simple</h2>
+                        <p>Usa el botón para pasar a la siguiente canción en tu lista personalizada</p>
                         
-                        <div id="song-info-content" class="song-info-content hidden">
-                            <div class="album-cover">
-                                <img id="song-image" src="" alt="Album Cover" style="display: none;">
-                                <div id="default-cover" class="default-album-cover">🎵</div>
-                            </div>
-                            
-                            <div class="song-details">
-                                <h2 id="song-title">Título de la Canción</h2>
-                                <h3 id="song-artist">Artista</h3>
-                                <p id="song-album">Álbum</p>
-                                <div class="song-meta">
-                                    <span id="song-year" class="meta-item"></span>
-                                    <span id="song-genre" class="meta-item"></span>
-                                </div>
-                            </div>
-                            
-                            <div class="guess-section">
-                                <h4>¿Conoces esta canción?</h4>
-                                <div class="guess-buttons">
-                                    <button class="guess-btn easy" onclick="ControlApp.makeGuess('easy')">😊 Fácil</button>
-                                    <button class="guess-btn medium" onclick="ControlApp.makeGuess('medium')">🤔 Regular</button>
-                                    <button class="guess-btn hard" onclick="ControlApp.makeGuess('hard')">😵 Difícil</button>
-                                    <button class="guess-btn unknown" onclick="ControlApp.makeGuess('unknown')">❓ No la conozco</button>
-                                </div>
-                            </div>
+                        <button id="next-song-btn" class="big-control-button">
+                            ⏭️ Siguiente Canción
+                        </button>
+                        
+                        <div id="control-status" class="status-message info">
+                            Listo para controlar la música
                         </div>
                     </div>
-                    
-                    <div id="client-info" class="info-card">
-                        <h4>Dispositivo Conectado</h4>
-                        <p id="client-info-text">Conectando...</p>
-                    </div>
-                    
-                    <div class="control-icon">🎵</div>
-                    <h2>Control de Música</h2>
-                    <p>¡Descubre música increíble de forma aleatoria!</p>
+                </div>
                     
                     <div id="game-stats" class="stats-section">
                         <h4>📊 Tu Puntuación</h4>
@@ -182,6 +153,12 @@ window.ControlApp = {
         if (createProfileBtn) {
             createProfileBtn.addEventListener('click', () => this.createProfile());
         }
+        
+        // Simple control button
+        const nextSongBtn = document.getElementById('next-song-btn');
+        if (nextSongBtn) {
+            nextSongBtn.addEventListener('click', () => this.nextSong());
+        }
     },
     
     checkURLParams() {
@@ -207,7 +184,7 @@ window.ControlApp = {
         console.log(`[Control] Mostrando vista: ${viewName}`);
         
         // Ocultar todas las vistas
-        const views = ['scanner-view', 'register-view', 'profile-setup-view', 'song-info-view'];
+        const views = ['scanner-view', 'register-view', 'profile-setup-view', 'simple-control-view'];
         views.forEach(viewId => {
             const element = document.getElementById(viewId);
             if (element) element.classList.add('hidden');
@@ -220,7 +197,7 @@ window.ControlApp = {
             this.currentView = viewName;
             
             // Si es la vista de control, actualizar la info del cliente
-            if (viewName === 'music-control' && this.clientName) {
+            if (viewName === 'simple-control' && this.clientName) {
                 // Usar setTimeout para asegurar que el DOM esté listo
                 setTimeout(() => this.updateClientInfo(), 100);
             }
@@ -256,7 +233,7 @@ window.ControlApp = {
                 const hasProfile = localStorage.getItem(`profile_${this.clientId}`);
                 if (hasProfile) {
                     this.userProfile = JSON.parse(hasProfile);
-                    this.showView('song-info');
+                    this.showView('simple-control');
                     this.updateClientInfo();
                     this.startHeartbeat();
                 } else {
@@ -350,7 +327,7 @@ window.ControlApp = {
                 this.userProfile = data.profile;
                 localStorage.setItem(`profile_${this.clientId}`, JSON.stringify(this.userProfile));
                 
-                this.showView('song-info');
+                this.showView('simple-control');
                 this.updateClientInfo();
                 this.startHeartbeat();
                 this.showStatus('profile-setup-status', 'Perfil creado exitosamente', 'success');
@@ -363,20 +340,20 @@ window.ControlApp = {
         }
     },
     
-    // Función para hacer una respuesta/adivinanza
-    async makeGuess(difficulty) {
+    // Función simple para pasar a la siguiente canción
+    async nextSong() {
         try {
-            console.log(`[Control] Enviando respuesta: ${difficulty}`);
+            console.log('[Control] Enviando comando: siguiente canción');
+            this.showStatus('control-status', 'Cambiando canción...', 'info');
             
-            const response = await fetch(`${this.baseUrl}/guess`, {
+            const response = await fetch(`${this.baseUrl}/commands`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sessionId: this.sessionId,
                     clientId: this.clientId,
+                    action: 'next',
                     clientName: this.clientName,
-                    difficulty: difficulty,
-                    songId: this.currentSongInfo?.id,
                     timestamp: Date.now()
                 })
             });
@@ -384,117 +361,24 @@ window.ControlApp = {
             const data = await response.json();
             
             if (data.success) {
-                this.updateStats(difficulty);
-                this.showGuessResult(difficulty);
+                this.showStatus('control-status', '✅ Siguiente canción solicitada', 'success');
+                
+                // Limpiar el estado después de 2 segundos
+                setTimeout(() => {
+                    this.showStatus('control-status', 'Listo para cambiar canción', 'info');
+                }, 2000);
             } else {
-                console.error('[Control] Error al enviar respuesta:', data);
+                this.showStatus('control-status', 'Error al cambiar canción', 'error');
             }
         } catch (error) {
-            console.error('[Control] Error al enviar respuesta:', error);
+            console.error('[Control] Error al enviar comando:', error);
+            this.showStatus('control-status', 'Error de conexión', 'error');
         }
-    },
-    
-    // Actualizar estadísticas locales
-    updateStats(difficulty) {
-        let stats = JSON.parse(localStorage.getItem(`game_stats_${this.clientId}`) || '{"correct": 0, "total": 0}');
-        
-        stats.total++;
-        if (difficulty !== 'unknown') {
-            stats.correct++;
-        }
-        
-        localStorage.setItem(`game_stats_${this.clientId}`, JSON.stringify(stats));
-        this.renderStats(stats);
-    },
-    
-    // Mostrar estadísticas en la UI
-    renderStats(stats) {
-        document.getElementById('correct-guesses').textContent = stats.correct;
-        document.getElementById('total-songs').textContent = stats.total;
-        document.getElementById('accuracy').textContent = stats.total > 0 ? 
-            Math.round((stats.correct / stats.total) * 100) + '%' : '0%';
-    },
-    
-    // Mostrar resultado de la adivinanza
-    showGuessResult(difficulty) {
-        const messages = {
-            'easy': '😊 ¡Fácil! +3 puntos',
-            'medium': '🤔 ¡Bien! +2 puntos', 
-            'hard': '😵 ¡Impresionante! +5 puntos',
-            'unknown': '❓ No pasa nada, ¡a seguir aprendiendo!'
-        };
-        
-        // Mostrar mensaje temporal
-        const guessSection = document.querySelector('.guess-section');
-        if (guessSection) {
-            const originalHTML = guessSection.innerHTML;
-            guessSection.innerHTML = `<div class="guess-result">${messages[difficulty]}</div>`;
-            
-            setTimeout(() => {
-                guessSection.innerHTML = originalHTML;
-            }, 2000);
-        }
-    },
-    
-    // Polling para recibir información de canciones desde el monitor
-    async pollForSongInfo() {
-        if (!this.sessionId || !this.clientId) return;
-        
-        try {
-            const response = await fetch(`${this.baseUrl}/current-song/${this.sessionId}`);
-            const data = await response.json();
-            
-            if (data.success && data.song) {
-                this.displaySongInfo(data.song);
-            } else {
-                this.showWaitingState();
-            }
-        } catch (error) {
-            console.error('[Control] Error obteniendo info de canción:', error);
-        }
-    },
-    
-    // Mostrar información de la canción actual
-    displaySongInfo(songInfo) {
-        this.currentSongInfo = songInfo;
-        
-        // Mostrar contenido de la canción
-        document.getElementById('song-info-content').classList.remove('hidden');
-        document.querySelector('.waiting-message').style.display = 'none';
-        
-        // Llenar información
-        document.getElementById('song-title').textContent = songInfo.title || 'Título desconocido';
-        document.getElementById('song-artist').textContent = songInfo.artist || 'Artista desconocido';
-        document.getElementById('song-album').textContent = songInfo.album || 'Álbum desconocido';
-        document.getElementById('song-year').textContent = songInfo.year || '';
-        document.getElementById('song-genre').textContent = songInfo.genre || '';
-        
-        // Manejar imagen del álbum
-        const songImage = document.getElementById('song-image');
-        const defaultCover = document.getElementById('default-cover');
-        
-        if (songInfo.image) {
-            songImage.src = songInfo.image;
-            songImage.style.display = 'block';
-            defaultCover.style.display = 'none';
-        } else {
-            songImage.style.display = 'none';
-            defaultCover.style.display = 'flex';
-        }
-    },
-    
-    // Mostrar estado de espera
-    showWaitingState() {
-        document.getElementById('song-info-content').classList.add('hidden');
-        document.querySelector('.waiting-message').style.display = 'block';
     },
     
     startHeartbeat() {
         this.heartbeatInterval = setInterval(async () => {
             try {
-                // Además del heartbeat, también hacer polling de canciones
-                this.pollForSongInfo();
-                
                 await fetch(`${this.baseUrl}/heartbeat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -506,11 +390,7 @@ window.ControlApp = {
             } catch (error) {
                 console.error('[Control] Heartbeat failed:', error);
             }
-        }, 3000); // Más frecuente para actualizar canciones
-        
-        // Cargar estadísticas iniciales
-        const stats = JSON.parse(localStorage.getItem(`game_stats_${this.clientId}`) || '{"correct": 0, "total": 0}');
-        this.renderStats(stats);
+        }, 10000); // Heartbeat cada 10 segundos
     },
     
     updateClientInfo() {
