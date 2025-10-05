@@ -232,6 +232,7 @@ window.ControlApp = {
                 if (hasProfile) {
                     this.userProfile = JSON.parse(hasProfile);
                     this.showView('music-control');
+                    this.updateClientInfo();
                     this.startHeartbeat();
                 } else {
                     this.loadGenres();
@@ -325,6 +326,7 @@ window.ControlApp = {
                 localStorage.setItem(`profile_${this.clientId}`, JSON.stringify(this.userProfile));
                 
                 this.showView('music-control');
+                this.updateClientInfo();
                 this.startHeartbeat();
                 this.showStatus('profile-setup-status', 'Perfil creado exitosamente', 'success');
             } else {
@@ -338,6 +340,9 @@ window.ControlApp = {
     
     async sendCommand(command) {
         try {
+            // Mostrar feedback inmediato
+            this.showStatus('control-status', `Enviando comando "${command}"...`, 'info');
+            
             const response = await fetch(`${this.baseUrl}/commands`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -353,12 +358,19 @@ window.ControlApp = {
             const data = await response.json();
             
             if (data.success) {
-                this.showStatus('control-status', `Comando "${command}" enviado`, 'success');
+                console.log('[Control] ✅ Comando enviado exitosamente:', command);
+                this.showStatus('control-status', `✅ Comando "${command}" enviado al monitor`, 'success');
+                
+                // Limpiar el estado después de 3 segundos
+                setTimeout(() => {
+                    this.showStatus('control-status', 'Listo para enviar comandos', 'info');
+                }, 3000);
             } else {
+                console.error('[Control] ❌ Error en respuesta del servidor:', data);
                 this.showStatus('control-status', 'Error enviando comando', 'error');
             }
         } catch (error) {
-            console.error('[Control] Error sending command:', error);
+            console.error('[Control] ❌ Error sending command:', error);
             this.showStatus('control-status', 'Error de conexión', 'error');
         }
     },
@@ -380,8 +392,14 @@ window.ControlApp = {
         }, 10000);
     },
     
-    disconnect() {
-        if (this.heartbeatInterval) {
+    updateClientInfo() {
+        const clientInfoText = document.getElementById('client-info-text');
+        if (clientInfoText && this.clientName) {
+            clientInfoText.textContent = `Conectado como: ${this.clientName}`;
+        }
+    },
+    
+    disconnect() {        if (this.heartbeatInterval) {
             clearInterval(this.heartbeatInterval);
         }
         

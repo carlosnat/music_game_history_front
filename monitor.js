@@ -543,8 +543,19 @@ window.MonitorApp = {
                 }
                 
                 if (randomSong) {
-                    console.log('[Monitor] 🎵 Canción seleccionada:', randomSong.name, '-', randomSong.artist);
-                    this.updateCurrentSong(randomSong);
+                    console.log('[Monitor] 🎵 Canción seleccionada:', randomSong.title || randomSong.name, '-', randomSong.artist);
+                    console.log('[Monitor] 🔍 Estructura completa de la canción:', randomSong);
+                    
+                    // Normalizar estructura de la canción si es necesario
+                    const normalizedSong = {
+                        title: randomSong.title || randomSong.name || 'Sin título',
+                        artist: randomSong.artist || 'Sin artista',
+                        genre: randomSong.genre || 'Sin género',
+                        year: randomSong.year || randomSong.release_year || 'Sin año',
+                        album: randomSong.album || 'Sin álbum'
+                    };
+                    
+                    this.updateCurrentSong(normalizedSong);
                     this.updateStatus('Reproduciendo canción aleatoria', 'success');
                     return;
                 } else {
