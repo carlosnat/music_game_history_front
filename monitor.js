@@ -32,9 +32,31 @@ window.MonitorApp = {
         if (existingToken) {
             console.log('[Auth] ✅ Token existente encontrado.');
             this.updateStatus('Spotify ya conectado', 'success');
+            this.enableSpotifyControls();
         } else {
             this.updateStatus('Conecta tu cuenta de Spotify para comenzar', 'info');
+            this.disableSpotifyControls();
         }
+    },
+    
+    enableSpotifyControls() {
+        const buttons = ['play-random-btn', 'play-btn', 'pause-btn', 'next-btn'];
+        buttons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = false;
+            }
+        });
+    },
+    
+    disableSpotifyControls() {
+        const buttons = ['play-random-btn', 'play-btn', 'pause-btn', 'next-btn'];
+        buttons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = true;
+            }
+        });
     },
     
     render() {
@@ -556,7 +578,10 @@ window.MonitorApp = {
                     };
                     
                     this.updateCurrentSong(normalizedSong);
-                    this.updateStatus('Reproduciendo canción aleatoria', 'success');
+                    this.updateStatus('Buscando en Spotify...', 'info');
+                    
+                    // Intentar reproducir la canción en Spotify
+                    await this.searchAndPlayOnSpotify(normalizedSong);
                     return;
                 } else {
                     console.warn('[Monitor] ⚠️ Respuesta vacía del profiler, intentando endpoint alternativo...');
@@ -597,15 +622,74 @@ window.MonitorApp = {
     },
     
     async playMusic() {
-        this.updateStatus('Reproduciendo...', 'success');
+        try {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                this.updateStatus('Conecta Spotify para reproducir', 'warning');
+                return;
+            }
+            
+            const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                this.updateStatus('Reproduciendo...', 'success');
+            } else if (response.status === 404) {
+                this.updateStatus('Abre Spotify para reproducir', 'warning');
+            } else {
+                this.updateStatus('Error al reproducir', 'error');
+            }
+        } catch (error) {
+            this.updateStatus('Error conectando con Spotify', 'error');
+        }
     },
     
     async pauseMusic() {
-        this.updateStatus('Pausado', 'info');
+        try {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                this.updateStatus('Conecta Spotify para pausar', 'warning');
+                return;
+            }
+            
+            const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                this.updateStatus('Pausado', 'info');
+            } else {
+                this.updateStatus('Error al pausar', 'error');
+            }
+        } catch (error) {
+            this.updateStatus('Error conectando con Spotify', 'error');
+        }
     },
     
     async nextTrack() {
-        this.updateStatus('Siguiente canción...', 'info');
+        try {
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                this.updateStatus('Conecta Spotify para siguiente canción', 'warning');
+                return;
+            }
+            
+            const response = await fetch('https://api.spotify.com/v1/me/player/next', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                this.updateStatus('Siguiente canción...', 'success');
+            } else {
+                this.updateStatus('Error al cambiar canción', 'error');
+            }
+        } catch (error) {
+            this.updateStatus('Error conectando con Spotify', 'error');
+        }
     },
     
     updateCurrentSong(song) {
@@ -653,6 +737,70 @@ window.MonitorApp = {
             
             // Mostrar mensaje al usuario
             this.updateStatus('No se puede conectar al servidor. Algunas funciones pueden no estar disponibles.', 'warning');
+        }
+    },
+    
+    async searchAndPlayOnSpotify(song) {
+        try {
+            // Verificar si tenemos token de Spotify
+            const token = window.localStorage.getItem('spotify_token');
+            if (!token) {
+                this.updateStatus('Conecta Spotify para reproducir música', 'warning');
+                return;
+            }
+            
+            // Crear query de búsqueda
+            const searchQuery = `track:${song.title} artist:${song.artist}`;
+            console.log('[Monitor] 🔍 Buscando en Spotify:', searchQuery);
+            
+            // Buscar en Spotify
+            const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                
+                if (searchData.tracks && searchData.tracks.items && searchData.tracks.items.length > 0) {
+                    const track = searchData.tracks.items[0];
+                    console.log('[Monitor] ✅ Canción encontrada en Spotify:', track.name, '-', track.artists[0].name);
+                    
+                    // Reproducir la canción
+                    const playResponse = await fetch('https://api.spotify.com/v1/me/player/play', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            uris: [track.uri]
+                        })
+                    });
+                    
+                    if (playResponse.ok) {
+                        this.updateStatus(`🎵 Reproduciendo: ${track.name}`, 'success');
+                        this.enableSpotifyControls();
+                    } else if (playResponse.status === 404) {
+                        this.updateStatus('Abre Spotify en tu dispositivo para reproducir', 'warning');
+                    } else {
+                        this.updateStatus('Error reproduciendo en Spotify', 'error');
+                    }
+                } else {
+                    console.warn('[Monitor] ❌ Canción no encontrada en Spotify');
+                    this.updateStatus(`Canción "${song.title}" no encontrada en Spotify`, 'warning');
+                }
+            } else if (searchResponse.status === 401) {
+                this.updateStatus('Token de Spotify expirado, vuelve a conectar', 'error');
+                window.localStorage.removeItem('spotify_token');
+            } else {
+                this.updateStatus('Error buscando en Spotify', 'error');
+            }
+            
+        } catch (error) {
+            console.error('[Monitor] Error in searchAndPlayOnSpotify:', error);
+            this.updateStatus('Error conectando con Spotify', 'error');
         }
     },
     

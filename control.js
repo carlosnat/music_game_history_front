@@ -199,6 +199,12 @@ window.ControlApp = {
         if (targetView) {
             targetView.classList.remove('hidden');
             this.currentView = viewName;
+            
+            // Si es la vista de control, actualizar la info del cliente
+            if (viewName === 'music-control' && this.clientName) {
+                // Usar setTimeout para asegurar que el DOM esté listo
+                setTimeout(() => this.updateClientInfo(), 100);
+            }
         }
     },
     
