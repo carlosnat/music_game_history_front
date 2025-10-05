@@ -311,8 +311,9 @@ window.ControlApp = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    clientId: this.clientId,
-                    genres: this.selectedGenres,
+                    name: this.clientName,
+                    favorite_genres: this.selectedGenres,
+                    favorite_decades: [], // Array vacío por ahora, se puede agregar funcionalidad después
                     songsLimit: parseInt(songsLimit)
                 })
             });
