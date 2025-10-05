@@ -212,7 +212,7 @@ window.ControlApp = {
         }
         
         try {
-            const response = await fetch(`${this.baseUrl}/register-client`, {
+            const response = await fetch(`${this.baseUrl}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -307,7 +307,7 @@ window.ControlApp = {
         const songsLimit = document.getElementById('songs-limit').value;
         
         try {
-            const response = await fetch(`${this.baseUrl}/api/profiler/create-profile`, {
+            const response = await fetch(`${this.baseUrl}/create-profile`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
