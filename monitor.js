@@ -9,6 +9,11 @@ window.MonitorApp = {
     currentPlaylist: null,
     currentSongIndex: 0,
     
+    // Propiedades del Spotify Web Playback SDK
+    spotifyPlayer: null,
+    deviceId: null,
+    playerReady: false,
+    
     init() {
         console.log('[Monitor] Inicializando monitor...');
         
@@ -35,11 +40,148 @@ window.MonitorApp = {
             console.log('[Auth] ✅ Token existente encontrado.');
             this.updateStatus('Spotify ya conectado', 'success');
             this.enableSpotifyControls();
+            this.initializeSpotifySDK(existingToken);
         } else {
             this.updateStatus('Conecta tu cuenta de Spotify para comenzar', 'info');
             this.disableSpotifyControls();
         }
     },
+    
+    // ===== SPOTIFY WEB PLAYBACK SDK =====
+    
+    // Inicializar Spotify Web Playback SDK
+    initializeSpotifySDK(token) {
+        console.log('[Spotify SDK] Inicializando Web Playback SDK...');
+        
+        // Función que se ejecuta cuando el SDK está listo
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            console.log('[Spotify SDK] SDK listo, creando player...');
+            
+            this.spotifyPlayer = new Spotify.Player({
+                name: 'Music Game Player',
+                getOAuthToken: cb => { cb(token); },
+                volume: 0.8
+            });
+
+            // Configurar eventos del player
+            this.setupSpotifyEventListeners();
+
+            // Conectar el player
+            this.spotifyPlayer.connect().then(success => {
+                if (success) {
+                    console.log('[Spotify SDK] ✅ Player conectado exitosamente!');
+                    this.updateStatus('🎵 Spotify Player conectado', 'success');
+                } else {
+                    console.error('[Spotify SDK] ❌ Error al conectar player');
+                    this.updateStatus('❌ Error conectando Spotify Player', 'error');
+                }
+            });
+        };
+
+        // Si el SDK ya está listo, ejecutar inmediatamente
+        if (window.Spotify) {
+            window.onSpotifyWebPlaybackSDKReady();
+        }
+    },
+
+    // Configurar eventos del Spotify Player
+    setupSpotifyEventListeners() {
+        // Player listo
+        this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+            console.log('[Spotify SDK] ✅ Player listo! Device ID:', device_id);
+            this.deviceId = device_id;
+            this.playerReady = true;
+            this.updateStatus('🎵 Spotify Player listo para reproducir', 'success');
+            this.enableSpotifyControls();
+        });
+
+        // Player no listo
+        this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+            console.log('[Spotify SDK] ⚠️ Player no está listo. Device ID:', device_id);
+            this.playerReady = false;
+            this.updateStatus('⚠️ Spotify Player no está listo', 'warning');
+        });
+
+        // Estado del player cambió
+        this.spotifyPlayer.addListener('player_state_changed', (state) => {
+            if (!state) return;
+            
+            console.log('[Spotify SDK] Estado del player cambió');
+            const current_track = state.track_window.current_track;
+            
+            if (current_track) {
+                console.log('[Spotify SDK] 🎵 Canción actual:', current_track.name, 'por', current_track.artists[0].name);
+                this.updateCurrentSong({
+                    title: current_track.name,
+                    artist: current_track.artists[0].name,
+                    album: current_track.album.name,
+                    image: current_track.album.images[0]?.url
+                });
+            }
+        });
+
+        // Errores
+        this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+            console.error('[Spotify SDK] Error de inicialización:', message);
+            this.updateStatus('❌ Error inicializando Spotify Player', 'error');
+        });
+
+        this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
+            console.error('[Spotify SDK] Error de autenticación:', message);
+            this.updateStatus('❌ Error de autenticación Spotify', 'error');
+        });
+
+        this.spotifyPlayer.addListener('account_error', ({ message }) => {
+            console.error('[Spotify SDK] Error de cuenta:', message);
+            this.updateStatus('❌ Se requiere Spotify Premium', 'error');
+        });
+
+        this.spotifyPlayer.addListener('playback_error', ({ message }) => {
+            console.error('[Spotify SDK] Error de reproducción:', message);
+            this.updateStatus('❌ Error en reproducción', 'error');
+        });
+    },
+
+    // Reproducir canción por URI
+    async playSpotifyURI(uri) {
+        if (!this.playerReady || !this.deviceId) {
+            console.error('[Spotify SDK] Player no está listo');
+            this.updateStatus('⚠️ Spotify Player no está listo', 'warning');
+            return false;
+        }
+
+        try {
+            console.log('[Spotify SDK] 🎵 Reproduciendo URI:', uri);
+            
+            const token = localStorage.getItem('spotify_token');
+            const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${this.deviceId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    uris: [uri]
+                })
+            });
+
+            if (response.ok) {
+                console.log('[Spotify SDK] ✅ Reproducción iniciada');
+                this.updateStatus('▶️ Reproduciendo...', 'success');
+                return true;
+            } else {
+                console.error('[Spotify SDK] Error HTTP:', response.status);
+                this.updateStatus('⚠️ Error al reproducir', 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('[Spotify SDK] Error:', error);
+            this.updateStatus('⚠️ Error de conexión', 'error');
+            return false;
+        }
+    },
+    
+    // ===== FIN SPOTIFY SDK =====
     
     enableSpotifyControls() {
         const buttons = ['load-playlist-btn', 'play-btn', 'pause-btn', 'next-btn'];
@@ -635,37 +777,58 @@ window.MonitorApp = {
         try {
             this.updateStatus('Cargando lista de canciones...', 'info');
             
-            // Obtener el cliente conectado más reciente (o mostrar selector)
-            const clientsData = await fetch(`${this.serverBaseURL}/clients?sessionId=${this.sessionId}`);
-            const clients = await clientsData.json();
+            // Intentar cargar canciones usando el profiler
+            console.log('[Monitor] 📋 Intentando cargar canciones del profiler...');
             
-            if (clients.length === 0) {
-                this.updateStatus('No hay clientes conectados', 'warning');
-                return;
+            const playlistResponse = await fetch(`${this.serverBaseURL}/api/profiler/songs?limit=50&random=true`);
+            
+            if (!playlistResponse.ok) {
+                console.warn('[Monitor] ⚠️ Error al cargar desde profiler, intentando endpoint alternativo...');
+                
+                // Fallback: intentar con endpoint directo de canciones
+                const songsResponse = await fetch(`${this.serverBaseURL}/songs/random/20`);
+                if (!songsResponse.ok) {
+                    this.updateStatus('Error cargando lista de canciones', 'error');
+                    return;
+                }
+                
+                const songsData = await songsResponse.json();
+                this.currentPlaylist = songsData;
+            } else {
+                const playlistData = await playlistResponse.json();
+                
+                if (playlistData.success && playlistData.songs) {
+                    this.currentPlaylist = playlistData.songs;
+                } else {
+                    this.updateStatus('No se encontraron canciones', 'warning');
+                    return;
+                }
             }
             
-            // Usar el primer cliente con perfil
-            const clientWithProfile = clients.find(client => client.profileId);
-            
-            if (!clientWithProfile) {
-                this.updateStatus('Ningún cliente tiene un perfil configurado', 'warning');
-                return;
-            }
-            
-            // Cargar canciones del perfil
-            const playlistResponse = await fetch(`${this.serverBaseURL}/api/profiler/profiles/${clientWithProfile.profileId}/songs`);
-            const playlistData = await playlistResponse.json();
-            
-            if (playlistData.success && playlistData.songs) {
-                this.currentPlaylist = playlistData.songs;
+            if (this.currentPlaylist && this.currentPlaylist.length > 0) {
                 this.currentSongIndex = 0;
-                this.displayPlaylist(playlistData.songs);
-                this.updateStatus(`Lista cargada: ${playlistData.songs.length} canciones`, 'success');
+                this.displayPlaylist(this.currentPlaylist);
+                this.updateStatus(`Lista cargada: ${this.currentPlaylist.length} canciones`, 'success');
                 
                 // Mostrar la sección de playlist
-                document.getElementById('playlist-section').classList.remove('hidden');
+                const playlistSection = document.getElementById('playlist-section');
+                if (playlistSection) {
+                    playlistSection.classList.remove('hidden');
+                }
+                
+                console.log(`[Monitor] ✅ Playlist cargada: ${this.currentPlaylist.length} canciones`);
+                
+                // Auto-reproducir la primera canción si el player está listo
+                if (this.playerReady && this.currentPlaylist[0]) {
+                    const firstSong = this.currentPlaylist[0];
+                    if (firstSong.spotify_uri) {
+                        console.log('[Monitor] 🎵 Auto-reproduciendo primera canción...');
+                        await this.playSpotifyURI(firstSong.spotify_uri);
+                        this.updateCurrentSong(firstSong);
+                    }
+                }
             } else {
-                this.updateStatus('Error cargando lista de canciones', 'error');
+                this.updateStatus('No hay canciones disponibles', 'warning');
             }
             
         } catch (error) {
@@ -715,12 +878,23 @@ window.MonitorApp = {
         this.currentSongIndex = index;
         const song = this.currentPlaylist[index];
         
+        console.log(`[Monitor] 🎵 Reproduciendo canción ${index + 1}: ${song.title} por ${song.artist}`);
+        
         // Actualizar UI
         this.updateCurrentSong(song);
         this.displayPlaylist(this.currentPlaylist); // Refresh para mostrar current
         
-        // Reproducir en Spotify
-        await this.searchAndPlayOnSpotify(song);
+        // Reproducir en Spotify usando SDK si tiene URI
+        if (song.spotify_uri) {
+            await this.playSpotifyURI(song.spotify_uri);
+        } else if (song.uri) {
+            // Fallback para formato alternativo de URI
+            await this.playSpotifyURI(song.uri);
+        } else {
+            // Fallback: buscar y reproducir usando la función existente
+            console.warn('[Monitor] ⚠️ Canción sin URI, usando búsqueda tradicional...');
+            await this.searchAndPlayOnSpotify(song);
+        }
     },
     
     // Mezclar playlist
@@ -820,53 +994,34 @@ window.MonitorApp = {
     },
     
     async playMusic() {
+        if (!this.spotifyPlayer || !this.playerReady) {
+            this.updateStatus('⚠️ Spotify Player no está listo', 'warning');
+            return;
+        }
+
         try {
-            const token = window.localStorage.getItem('spotify_token');
-            if (!token) {
-                this.updateStatus('Conecta Spotify para reproducir', 'warning');
-                return;
-            }
-            
-            const response = await fetch('https://api.spotify.com/v1/me/player/play', {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (response.ok) {
-                this.updateStatus('Reproduciendo...', 'success');
-            } else if (response.status === 404) {
-                this.updateStatus('⚠️ Abre Spotify y reproduce cualquier canción primero', 'warning');
-            } else {
-                this.updateStatus('Error al reproducir', 'error');
-            }
+            await this.spotifyPlayer.resume();
+            console.log('[Spotify SDK] ▶️ Reproducción reanudada');
+            this.updateStatus('▶️ Reproduciendo', 'success');
         } catch (error) {
-            this.updateStatus('Error conectando con Spotify', 'error');
+            console.error('[Spotify SDK] Error al reproducir:', error);
+            this.updateStatus('⚠️ Error al reproducir', 'error');
         }
     },
     
     async pauseMusic() {
+        if (!this.spotifyPlayer || !this.playerReady) {
+            this.updateStatus('⚠️ Spotify Player no está listo', 'warning');
+            return;
+        }
+
         try {
-            const token = window.localStorage.getItem('spotify_token');
-            if (!token) {
-                this.updateStatus('Conecta Spotify para pausar', 'warning');
-                return;
-            }
-            
-            const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (response.ok) {
-                this.updateStatus('Pausado', 'info');
-            } else if (response.status === 404) {
-                this.updateStatus('⚠️ Abre Spotify y reproduce cualquier canción primero', 'warning');
-            } else {
-                this.updateStatus('Error al pausar', 'error');
-                console.warn('[Monitor] Error en Spotify API (pause):', response.status, response.statusText);
-            }
+            await this.spotifyPlayer.pause();
+            console.log('[Spotify SDK] ⏸️ Reproducción pausada');
+            this.updateStatus('⏸️ Pausado', 'info');
         } catch (error) {
-            this.updateStatus('Error conectando con Spotify', 'error');
+            console.error('[Spotify SDK] Error al pausar:', error);
+            this.updateStatus('⚠️ Error al pausar', 'error');
         }
     },
     
@@ -883,7 +1038,17 @@ window.MonitorApp = {
                 const nextSong = this.currentPlaylist[this.currentSongIndex];
                 
                 console.log(`[Monitor] ▶️ Reproduciendo: "${nextSong.title}" por ${nextSong.artist}`);
-                await this.playSongAtIndex(this.currentSongIndex);
+                
+                // Verificar si la canción tiene spotify_uri
+                if (nextSong.spotify_uri) {
+                    const success = await this.playSpotifyURI(nextSong.spotify_uri);
+                    if (success) {
+                        await this.playSongAtIndex(this.currentSongIndex);
+                    }
+                } else {
+                    console.warn('[Monitor] ⚠️ La canción no tiene spotify_uri');
+                    this.updateStatus('⚠️ Canción no disponible en Spotify', 'warning');
+                }
                 return;
             } else {
                 console.log('[Monitor] ❌ No hay playlist cargada, usando comando Spotify directo');
